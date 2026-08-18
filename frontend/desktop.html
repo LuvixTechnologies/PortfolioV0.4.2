@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUVIX OS</title>
+
+    <link rel="icon" type="image/png" href="assets/logo.png">
+    <link rel="apple-touch-icon" href="assets/logo.png">
+
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/global_style.css">
+    <link rel="stylesheet" href="css/desktop_style2.css">
+</head>
+<body>
+<div class="desktop-bg"></div>
+<div class="desktop" id="main-desktop">
+
+    <div class="desktop-bg">
+
+        <!-- Top Panel -->
+        <div id="top-panel">
+            <div class="panel-left">
+                <div id="parrot-menu" class="panel-button">🦜 Luvix OS</div>
+                <div class="panel-separator"></div>
+                <div class="panel-button" id="apps-button">Applications</div>
+                <div class="panel-button" id="system-button">Système</div>
+            </div>
+
+            <!-- Barre des tâches -->
+            <div id="taskbar" class="panel-taskbar"></div>
+
+            <div class="panel-right">
+                <div class="panel-item" id="fullscreen-btn" title="Plein écran">⛶</div>
+                <div class="panel-item" id="sound-toggle-desktop" title="Son">🔊</div>
+                <div class="panel-item" id="crt-toggle" title="Effet CRT">🌍</div>
+                <div class="panel-item" id="battery">🔋</div>
+                <div class="panel-separator"></div>
+                <div class="panel-item clock" id="clock">00:00</div>
+                <div class="panel-item" id="user-pill">👤 toi</div>
+            </div>
+        </div>
+
+        <!-- Icônes Bureau -->
+        <div id="desktop-icons">
+
+            <div class="desktop-icon" id="CV" style="top: 60px; left: 5px;">
+                <img src="assets/icons/pdf.png" alt="CV">
+                <span>Curriculum</span>
+            </div>
+
+            <div class="desktop-icon" id="Terminal" style="top: 60px; left: 125px;">
+                <img src="assets/icons/terminal.png" alt="Terminal">
+                <span>Terminal</span>
+            </div>
+
+            <div class="desktop-icon" id="Gallery" style="top: 180px; left: 5px;">
+                <img src="assets/icons/gallery.png" alt="Gallery">
+                <span>Galerie</span>
+            </div>
+
+            <div class="desktop-icon" id="Navigateur" style="top: 180px; left: 125px;">
+                <img src="assets/icons/oignon.png" alt="Navigateur">
+                <span>Navigateur</span>
+            </div>
+
+            <div class="desktop-icon" id="Luvix3DEngine" style="top: 60px; left: 365px;">
+                <img src="assets/icons/engine.png" alt="Luvix 3D Engine">
+                <span>Luvix 3D Engine</span>
+            </div>
+
+            <div class="desktop-icon" id="Explorateur" style="top: 420px; left: 5px;">
+                <img src="assets/icons/folder.png" alt="Explorateur">
+                <span>Explorateur</span>
+            </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<script src="js/desktop2.js"></script>
+</body>
+</html>
