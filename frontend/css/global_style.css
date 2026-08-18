@@ -1,0 +1,50 @@
+/* ================================================
+   LUVIX OS - Paramètres Généraux + CRT
+   ================================================ */
+
+:root {
+    /* Couleurs principales */
+    --parrot-bg: #0a0a14;
+    --parrot-dark: #11111f;
+    --parrot-cyan: #00e5d8;
+    --parrot-green: #00ffaa;
+    --parrot-purple: #9d4edd;
+    --parrot-text: #e0ffff;
+    --parrot-accent: #00f0ff;
+
+    /* Couleurs CRT */
+    --crt-bg: #000000;
+    --crt-text: #00ff9d;
+    --crt-glow: #00ff9d;
+    --crt-glow-soft: #00cc7a;
+}
+
+/* ====================== BASE ====================== */
+body {
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--parrot-bg);
+    font-family: 'VT323', monospace;
+    color: var(--parrot-text);
+    image-rendering: pixelated;
+}
+
+/* ====================== EFFET CRT (uniquement pour future page de chargement) ====================== */
+body.crt-enabled .loading-screen::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    pointer-events: none;
+    background: linear-gradient(rgba(255,255,255,0.07) 50%, rgba(0,0,0,0.3) 50%);
+    background-size: 100% 4px;
+    box-shadow: inset 0 0 90px rgba(0,0,0,0.8);
+    animation: crt-flicker 0.3s infinite alternate;
+}
+
+@keyframes crt-flicker {
+    0% { opacity: 0.95; }
+    100% { opacity: 1; }
+}

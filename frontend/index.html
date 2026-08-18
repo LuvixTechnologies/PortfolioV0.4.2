@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="assets/logo.png">
+    <link rel="apple-touch-icon" href="assets/logo.png">
+
+    <title>LUVIX OS v0.4.2 — Portfolio de Lucas Pettinato</title>
+
+    <meta name="description" content="Portfolio de Lucas Pettinato, ingénieur en Intelligence Artificielle et Cybersécurité. Passionné de low-level, de sécurité offensive et d’architectures système. Linux 16-bits.">
+
+    <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://lucas-pettinato.fr/">
+
+    <!-- Open Graph / Réseaux sociaux -->
+    <meta property="og:title" content="LUVIX OS v0.4.2 — 16-BIT Security Edition">
+    <meta property="og:description" content="Portfolio de Lucas Pettinato — Ingénieur IA & Cybersécurité. Un système d'exploitation rétro 16-bit avec terminal CRT, boot animé et interface pixel art.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://lucas-pettinato.fr/">
+    <meta property="og:image" content="https://lucas-pettinato.fr/assets/preview.png"> <!-- à adapter si tu as une image -->
+
+    <!-- Twitter Card (optionnel mais recommandé) -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="LUVIX OS v0.4.2 — 16-BIT Security Edition">
+    <meta name="twitter:description" content="Portfolio de Lucas Pettinato — Ingénieur IA & Cybersécurité. Linux 16-bits.">
+
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/global_style.css">
+    <link rel="stylesheet" href="css/loading_style.css">
+</head>
+
+<body>
+
+<div class="loading-content">
+    <!-- ===== POWER SCREEN - Pixel Art 16-bit ===== -->
+
+    <div id="power-screen" class="power-screen active">
+        <div class="power-container">
+            <div class="power-logo">
+                <span class="parrot-icon"></span>
+                <h1>Luvix OS</h1>
+                <p class="subtitle">• 16-BIT SECURITY EDITION •</p>
+            </div>
+
+            <button id="power-btn" class="pixel-power-btn">
+                POWER
+            </button>
+
+            <div class="power-footer">
+                <p>CLIQUEZ POUR DÉMARRER LE SYSTÈME</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===== ÉCRAN DE BOOT 1 : Terminal CRT Brut ===== -->
+<div id="boot-screen-1" class="boot-screen active">
+    <div class="crt-terminal">
+        <div class="crt-overlay"></div> <!-- pour les effets scanlines + flicker -->
+
+        <div class="terminal-content">
+            <div class="boot-header">
+                <span class="parrot-icon"></span>
+                <span>Luvix OS Security Edition v0.4.2</span>
+            </div>
+
+            <div id="boot-log" class="boot-log"></div>
+
+            <div class="boot-status">
+                <span id="boot-progress">0%</span> — Système en cours de chargement...
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== ÉCRAN DE BOOT 2 : Luvix OS Loading ===== -->
+<div id="boot-screen-2" class="boot-screen">
+    <div class="luvix-loading">
+        <h1>Luvix<sub>OS</sub></h1>
+
+        <div class="loading-bar-container">
+            <div id="loading-bar" class="loading-bar"></div>
+        </div>
+
+        <p id="loading-text">Initialisation du bureau...</p>
+    </div>
+</div>
+
+<!-- Audio pour le premier boot -->
+<audio id="boot-sound" preload="auto">
+    <source src="assets/sounds/boot-sound.mp3" type="audio/mpeg">
+    Votre navigateur ne supporte pas l'audio.
+</audio>
+
+<script src="js/loading.js"></script>
+
+</body>
+</html>

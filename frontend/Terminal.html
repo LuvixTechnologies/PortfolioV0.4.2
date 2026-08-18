@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>TERMINAL</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: #060b06;
+        }
+
+
+        .luvix-wrap {
+            background: #0a0f0a;
+            border-radius: 10px;
+            border: 1.5px solid #1a2a1a;
+            font-family: 'Share Tech Mono', monospace;
+
+            overflow: clip;
+
+            height: 100vh;
+            box-sizing: border-box;
+
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* Effet CRT scanlines */
+        .luvix-wrap::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(0,255,80,0.012) 2px,
+                    rgba(0,255,80,0.012) 4px
+            );
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* ===================== TITLEBAR ===================== */
+        .titlebar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: #0d150d;
+            border-bottom: 1px solid #1a2a1a;
+            flex-shrink: 0;
+        }
+
+        .titlebar-label {
+            font-family: 'VT323', monospace;
+            font-size: 16px;
+            color: #3a7a3a;
+            margin-left: 8px;
+            letter-spacing: 2px;
+        }
+
+        .ctf-badge {
+            margin-left: auto;
+            font-family: 'VT323', monospace;
+            font-size: 13px;
+            color: #1a4a1a;
+            background: #0f1f0f;
+            border: 1px solid #1a3a1a;
+            border-radius: 4px;
+            padding: 2px 8px;
+            letter-spacing: 1px;
+        }
+        .ctf-badge span { color: #4aff4a; }
+
+        /* ==================== OUTPUT & SCROLLBAR ==================== */
+        #output {
+            flex: 1;
+            min-height: 0;
+            padding: 14px 18px 8px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+
+            /* Firefox */
+            scrollbar-width: thin;
+            scrollbar-color: #1a3a1a #0a0f0a;
+        }
+
+        /* WebKit — piste */
+        #output::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #output::-webkit-scrollbar-track {
+            background: linear-gradient(
+                    to bottom,
+                    transparent 0%,
+                    rgba(0, 255, 80, 0.03) 50%,
+                    transparent 100%
+            );
+            border-left: 1px solid #1a2a1a;
+        }
+
+        /* WebKit — poignée */
+        #output::-webkit-scrollbar-thumb {
+            background: #1a3a1a;
+            border-radius: 0;
+        }
+
+        #output::-webkit-scrollbar-thumb:hover {
+            background: #00e87a;
+            box-shadow: 0 0 6px #00e87a;
+        }
+
+        #output::-webkit-scrollbar-thumb:active {
+            background: #00ff88;
+        }
+
+        /* ==================== LIGNES ==================== */
+        .line {
+            margin: 1px 0;
+            line-height: 1.5;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .c-green  { color: #00e87a; }
+        .c-lime   { color: #7fff7f; }
+        .c-cyan   { color: #00ffee; }
+        .c-yellow { color: #f0f060; }
+        .c-red    { color: #ff4444; }
+        .c-orange { color: #ff9944; }
+        .c-white  { color: #ccffcc; }
+        .c-dim    { color: #336633; }
+        .c-gold   { color: #ffd700; }
+        .c-pink   { color: #ff88cc; }
+
+        .prompt-line { color: #00e87a; }
+
+        /* ==================== INPUT ROW ==================== */
+        .input-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 18px 14px;
+            border-top: 1px solid #0f1f0f;
+            flex-shrink: 0;
+        }
+
+        #prompt-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            color: #00e87a;
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        #cmd-input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #ccffcc;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 14px;
+            flex: 1;
+            caret-color: #00e87a;
+            padding: 0 6px;
+        }
+
+        /* ==================== OVERLAYS ==================== */
+        .panic-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: #0000cc;
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 30px;
+            font-family: 'VT323', monospace;
+        }
+        .panic-overlay.show { display: flex; }
+
+        .panic-title {
+            font-size: 28px;
+            color: #ffffff;
+            text-align: center;
+            margin-bottom: 20px;
+            line-height: 1.3;
+        }
+        .panic-body {
+            font-size: 16px;
+            color: #ccccff;
+            text-align: left;
+            max-width: 500px;
+            line-height: 1.6;
+        }
+        .panic-blink { animation: pblink 1s step-end infinite; }
+
+        @keyframes pblink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+        .win-overlay {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(0,10,0,0.97);
+            z-index: 99;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 30px;
+        }
+        .win-overlay.show { display: flex; }
+
+        .win-ascii {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 11px;
+            color: #00e87a;
+            text-align: center;
+            line-height: 1.2;
+            white-space: pre;
+        }
+
+        .win-msg {
+            font-family: 'VT323', monospace;
+            font-size: 22px;
+            color: #ffd700;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .win-flags {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            color: #00ffee;
+            margin-top: 14px;
+            text-align: center;
+            line-height: 2;
+        }
+
+        .win-reset {
+            margin-top: 20px;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 12px;
+            color: #336633;
+            cursor: pointer;
+            border: 1px solid #1a3a1a;
+            background: transparent;
+            padding: 6px 16px;
+            border-radius: 4px;
+        }
+        .win-reset:hover {
+            color: #00e87a;
+            border-color: #00e87a;
+        }
+    </style>
+</head>
+<body>
+<div class="luvix-wrap" id="luvix">
+
+    <div class="titlebar">
+        <span class="titlebar-label">LUVIX OS — terminal</span>
+        <span class="ctf-badge">FLAGS: <span id="flag-count">0</span>/3</span>
+    </div>
+
+    <div id="output"></div>
+
+    <div class="input-row">
+        <span id="prompt-label">visitor@luvix:~$ </span>
+        <input id="cmd-input" type="text" autocomplete="off" spellcheck="false" autofocus />
+    </div>
+
+    <div class="panic-overlay" id="panic">
+        <div class="panic-title">⚠ KERNEL PANIC — NOT SYNCING<br>Fatal exception in Module 0x00DEAD</div>
+        <div class="panic-body">
+            Attempting to kill init!<br>
+            EIP: 0010:[&lt;c011e4a3&gt;] CPU: 0<br>
+            Process: rm (pid: 1337, stackpage=f01ca000)<br>
+            Stack: c0116748 c0116730 bffffc24 bffff890<br>
+            ...<br><br>
+            System halted.<br><br>
+            <span class="panic-blink">█</span>
+        </div>
+    </div>
+
+    <div class="win-overlay" id="winner">
+        <div class="win-ascii">
+            ██████╗ ██╗    ██╗███╗   ██╗███████╗██████╗
+            ██╔═══██╗██║    ██║████╗  ██║██╔════╝██╔══██╗
+            ██║   ██║██║ █╗ ██║██╔██╗ ██║█████╗  ██║  ██║
+            ██║   ██║██║███╗██║██║╚██╗██║██╔══╝  ██║  ██║
+            ╚██████╔╝╚███╔███╔╝██║ ╚████║███████╗██████╔╝
+            ╚═════╝  ╚══╝╚══╝ ╚═╝  ╚═══╝╚══════╝╚═════╝
+        </div>
+        <div class="win-msg">🏆 CTF COMPLÉTÉ — FÉLICITATIONS 🏆</div>
+        <div class="win-flags" id="win-flags-list"></div>
+        <button class="win-reset" onclick="resetGame()">↺ rejouer</button>
+    </div>
+
+</div>
+
+<script src="js/terminal.js"></script>
+</body>
+</html>

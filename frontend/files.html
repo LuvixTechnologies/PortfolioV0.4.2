@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Fichiers — luvix-explorer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+
+        /* ================================================
+           Variables — reprises telles quelles de
+           global_style.css / desktop_style.css pour rester
+           cohérent avec le reste du bureau LUVIX OS
+           ================================================ */
+        :root {
+            --parrot-bg:      #0a0a14;
+            --parrot-dark:    #11111f;
+            --parrot-cyan:    #00e5d8;
+            --parrot-green:   #00ffaa;
+            --parrot-purple:  #9d4edd;
+            --parrot-text:    #e0ffff;
+            --parrot-accent:  #00f0ff;
+
+            --c-bg-win:   rgba(18, 22, 32, 0.97);
+            --c-border:   rgba(0, 229, 216, 0.3);
+            --c-hover:    rgba(0, 229, 216, 0.2);
+            --c-hover-bg: rgba(0, 229, 216, 0.25);
+            --c-danger:   #ff5555;
+            --font-mono:  'VT323', monospace;
+            --tr: 0.2s ease;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0; padding: 0; height: 100%;
+            background: var(--parrot-bg);
+            color: var(--parrot-text);
+            font-family: var(--font-mono);
+            font-size: 17px;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* ================================================
+           FENÊTRE APPLICATION (imite .window du bureau)
+           ================================================ */
+        #explorer {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: var(--c-bg-win);
+        }
+
+        /* ---- Barre d'outils ---- */
+        #toolbar {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 10px;
+            background: linear-gradient(to right, #0f1621, #1a2538);
+            border-bottom: 1px solid var(--parrot-cyan);
+        }
+
+        .tb-btn {
+            width: 30px; height: 30px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,229,216,.08);
+            border: 1px solid var(--c-border);
+            border-radius: 4px;
+            color: var(--parrot-text);
+            font-size: 16px;
+            cursor: pointer;
+            transition: all var(--tr);
+        }
+        .tb-btn:hover:not(.disabled) { background: var(--c-hover-bg); box-shadow: 0 0 8px rgba(0,229,216,.4); }
+        .tb-btn.disabled { opacity: .3; cursor: default; }
+
+        #breadcrumb {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(0,0,0,.35);
+            border: 1px solid var(--c-border);
+            border-radius: 4px;
+            padding: 5px 10px;
+            overflow-x: auto;
+            white-space: nowrap;
+            scrollbar-width: none;
+        }
+        #breadcrumb::-webkit-scrollbar { display: none; }
+        .crumb {
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: var(--parrot-cyan);
+            transition: all var(--tr);
+        }
+        .crumb:hover { background: var(--c-hover-bg); color: white; }
+        .crumb.current { color: var(--parrot-green); text-shadow: 0 0 6px var(--parrot-green); }
+        .crumb-sep { color: rgba(224,255,255,.3); }
+
+        #search-box {
+            width: 190px;
+            background: rgba(0,0,0,.35);
+            border: 1px solid var(--c-border);
+            border-radius: 4px;
+            padding: 6px 10px;
+            color: var(--parrot-text);
+            font-family: var(--font-mono);
+            font-size: 16px;
+            outline: none;
+        }
+        #search-box:focus { border-color: var(--parrot-cyan); box-shadow: 0 0 8px rgba(0,229,216,.3); }
+        #search-box::placeholder { color: rgba(224,255,255,.4); }
+
+        /* ---- Corps : sidebar + grille ---- */
+        #body {
+            flex: 1;
+            display: flex;
+            min-height: 0;
+        }
+
+        #sidebar {
+            width: 210px;
+            flex-shrink: 0;
+            background: rgba(10,12,20,.6);
+            border-right: 1px solid var(--c-border);
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+        #sidebar::-webkit-scrollbar { width: 8px; }
+        #sidebar::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 4px; }
+
+        .side-label {
+            padding: 4px 16px;
+            font-size: 14px;
+            letter-spacing: 1px;
+            color: rgba(224,255,255,.35);
+            text-transform: uppercase;
+        }
+
+        .side-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 14px 7px 16px;
+            cursor: pointer;
+            color: var(--parrot-text);
+            transition: all var(--tr);
+            border-left: 3px solid transparent;
+        }
+        .side-item:hover { background: var(--c-hover); }
+        .side-item.active {
+            background: rgba(0,229,216,.15);
+            border-left: 3px solid var(--parrot-cyan);
+            color: var(--parrot-green);
+        }
+        .side-item .chev {
+            width: 12px;
+            font-size: 13px;
+            color: rgba(224,255,255,.5);
+            transition: transform var(--tr);
+            flex-shrink: 0;
+        }
+        .side-item.open .chev { transform: rotate(90deg); }
+        .side-item .ic { width: 18px; text-align: center; flex-shrink: 0; }
+        .side-item .lbl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .side-children {
+            display: none;
+            padding-left: 20px;
+        }
+        .side-children.expanded { display: block; }
+        .side-children .side-item { padding-left: 14px; }
+
+        /* ---- Zone principale ---- */
+        #main {
+            flex: 1;
+            overflow-y: auto;
+            padding: 22px;
+            position: relative;
+        }
+        #main::-webkit-scrollbar { width: 10px; }
+        #main::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 5px; }
+
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 108px);
+            gap: 18px 10px;
+        }
+
+        .item {
+            width: 108px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 10px 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all .15s;
+            position: relative;
+        }
+        .item:hover { background: rgba(255,255,255,.06); }
+        .item.selected {
+            background: rgba(0,229,216,.18);
+            border-color: var(--c-border);
+            box-shadow: 0 0 10px rgba(0,229,216,.25);
+        }
+
+        .item .icon {
+            width: 56px; height: 56px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 36px;
+            margin-bottom: 6px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,.6));
+        }
+        .item.folder .icon { color: var(--parrot-cyan); text-shadow: 0 0 10px rgba(0,229,216,.5); }
+        .item.file .icon   { color: var(--parrot-green); }
+        .item .name {
+            font-size: 15px;
+            line-height: 1.2;
+            color: var(--parrot-text);
+            word-break: break-word;
+            max-height: 2.4em;
+            overflow: hidden;
+        }
+
+        .item .cat-tag {
+            margin-top: 3px;
+            font-size: 11px;
+            padding: 0 5px;
+            border-radius: 3px;
+            border: 1px solid;
+            letter-spacing: .5px;
+        }
+
+        #empty-msg {
+            text-align: center;
+            color: rgba(224,255,255,.4);
+            margin-top: 60px;
+            font-size: 19px;
+        }
+
+        /* ---- Barre de statut ---- */
+        #statusbar {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 14px;
+            background: linear-gradient(to right, #0f1621, #1a2538);
+            border-top: 1px solid var(--c-border);
+            font-size: 15px;
+            color: rgba(224,255,255,.7);
+        }
+        #statusbar .parrot { color: var(--parrot-purple); text-shadow: 0 0 6px var(--parrot-purple); }
+
+        /* Tooltip fichier au survol (façon explorateur Windows) */
+        .badge-soon {
+            font-size: 11px;
+            background: rgba(157,78,221,.25);
+            color: var(--parrot-purple);
+            border: 1px solid rgba(157,78,221,.5);
+            border-radius: 3px;
+            padding: 0 5px;
+            margin-top: 3px;
+        }
+
+        #tooltip {
+            position: fixed;
+            z-index: 999;
+            max-width: 300px;
+            background: rgba(10,14,22,.97);
+            border: 1px solid var(--parrot-cyan);
+            border-radius: 6px;
+            padding: 10px 12px;
+            box-shadow: 0 4px 18px rgba(0,0,0,.6), 0 0 14px rgba(0,229,216,.25);
+            font-size: 15px;
+            line-height: 1.4;
+            pointer-events: none;
+            display: none;
+        }
+        #tooltip .tt-title {
+            color: var(--parrot-green);
+            font-size: 17px;
+            margin-bottom: 4px;
+            text-shadow: 0 0 5px rgba(0,255,170,.4);
+        }
+        #tooltip .tt-row { color: rgba(224,255,255,.6); }
+        #tooltip .tt-row b { color: var(--parrot-cyan); font-weight: normal; }
+        #tooltip .tt-summary {
+            margin-top: 6px;
+            color: var(--parrot-text);
+        }
+    </style>
+</head>
+<body>
+
+<div id="explorer">
+
+    <div id="toolbar">
+        <div class="tb-btn" id="btn-back" title="Précédent">&#8592;</div>
+        <div class="tb-btn" id="btn-up" title="Dossier parent">&#8593;</div>
+        <div id="breadcrumb"></div>
+        <input id="search-box" type="text" placeholder="Rechercher...">
+    </div>
+
+    <div id="body">
+        <nav id="sidebar"></nav>
+        <main id="main">
+            <div id="grid"></div>
+            <div id="empty-msg" style="display:none;">// dossier vide</div>
+        </main>
+    </div>
+
+    <div id="statusbar">
+        <span id="status-count">0 éléments</span>
+        <span class="parrot">✈ luvix-explorer — Parrot Security fs</span>
+    </div>
+
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+    /* ================================================
+       Arborescence du portfolio
+       4 catégories logiques : IA, Cybersécurité, Projets, Recherches
+       + un dossier Images qui reflète EXACTEMENT les photos listées
+       dans galerie.html (tableau `files`), via la propriété
+       `galleryPath` de chaque fichier image.
+       ================================================ */
+
+    // Échappement HTML basique (défense en profondeur : les noms/descriptions
+    // viennent de données internes contrôlées par nous, mais on reste
+    // rigoureux avant toute insertion via innerHTML).
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    const CAT_COLORS = {
+        ia:    { color: "#00e5d8", label: "IA" },
+        cyber: { color: "#ff5555", label: "Cybersécurité" },
+        proj:  { color: "#9d4edd", label: "Projet" },
+        rech:  { color: "#00ffaa", label: "Recherche" },
+    };
+
+    const FS = {
+        name: "Home",
+        type: "folder",
+        icon: "🏠",
+        children: [
+            // ——— Images (liées à galerie.html) ———
+            // Chaque fichier ci-dessous porte `galleryPath`, qui doit être
+            // IDENTIQUE à l'entrée correspondante dans le tableau `files`
+            // de galerie.html. C'est ce chemin, et non un chemin de fichier
+            // arbitraire, qui est transmis à openGalleryPhoto() côté
+            // desktop2.js : un double-clic ouvre donc directement la bonne
+            // photo dans la Galerie plutôt qu'un aperçu isolé.
+            {
+                name: "Images",
+                type: "folder",
+                icon: "🖼️",
+                desc: "Photos présentées dans la Galerie — double-clic pour ouvrir directement la bonne photo.",
+                children: [
+                    {
+                        name: "Divers",
+                        type: "folder",
+                        icon: "🖼️",
+                        desc: "Photos diverses (logo, portrait...).",
+                        children: [
+                            { name: "logo.png",    type: "file", icon: "🖼️", galleryPath: "logo.png",    desc: "Logo du portfolio." },
+                            { name: "helico.webp", type: "file", icon: "🖼️", galleryPath: "helico.webp", desc: "Photo diverse." },
+                            { name: "moi.webp",    type: "file", icon: "🖼️", galleryPath: "moi.webp",    desc: "Portrait." },
+                        ],
+                    },
+                    {
+                        name: "CTF",
+                        type: "folder",
+                        icon: "🚩",
+                        desc: "Photos liées aux CTF et compétitions cyber.",
+                        children: [
+                            { name: "cybernight_1er.webp",      type: "file", icon: "🚩", galleryPath: "CTF/cybernight_1er.webp",      desc: "1ère place — Cybernight." },
+                            { name: "European_cyber_cup.webp",  type: "file", icon: "🚩", galleryPath: "CTF/European_cyber_cup.webp",  desc: "European Cyber Cup." },
+                            { name: "Shoot_Bureau_DVC-04.webp", type: "file", icon: "🚩", galleryPath: "CTF/Shoot_Bureau_DVC-04.webp", desc: "Setup / bureau CTF." },
+                        ],
+                    },
+                    {
+                        name: "Projets (photos)",
+                        type: "folder",
+                        icon: "🖼️",
+                        desc: "Photos illustrant certains projets.",
+                        children: [
+                            { name: "ecran_transparent.webp", type: "file", icon: "🖼️", galleryPath: "projects/ecran_transparent.webp", desc: "Écran transparent — projet." },
+                            { name: "IA_Text_detection.webp", type: "file", icon: "🖼️", galleryPath: "projects/IA_Text_detection.webp", desc: "Détection de texte par IA." },
+                            { name: "ordi_reparation.webp",   type: "file", icon: "🖼️", galleryPath: "projects/ordi_reparation.webp",   desc: "Réparation d'ordinateur." },
+                        ],
+                    },
+                    {
+                        name: "Logs",
+                        type: "folder",
+                        icon: "🖼️",
+                        desc: "Photos diverses classées « logs ».",
+                        children: [
+                            { name: "pompier.webp", type: "file", icon: "🖼️", galleryPath: "logs/pompier.webp", desc: "Photo — logs." },
+                        ],
+                    },
+                    {
+                        name: "Garage",
+                        type: "folder",
+                        icon: "🖼️",
+                        desc: "Avant / après d'un projet de garage.",
+                        children: [
+                            { name: "avant.webp",    type: "file", icon: "🖼️", galleryPath: "garage/avant.webp",    desc: "Avant." },
+                            { name: "peinture.webp", type: "file", icon: "🖼️", galleryPath: "garage/peinture.webp", desc: "Peinture en cours." },
+                            { name: "apres.webp",    type: "file", icon: "🖼️", galleryPath: "garage/apres.webp",    desc: "Après." },
+                        ],
+                    },
+                    {
+                        name: "Hobbies",
+                        type: "folder",
+                        icon: "🖼️",
+                        desc: "Photos de loisirs.",
+                        children: [
+                            { name: "circuit_course.webp", type: "file", icon: "🖼️", galleryPath: "hobbies/circuit_course.webp", desc: "Circuit / course." },
+                            { name: "repas1.webp",         type: "file", icon: "🖼️", galleryPath: "hobbies/repas1.webp",         desc: "Repas." },
+                            { name: "repas2.webp",         type: "file", icon: "🖼️", galleryPath: "hobbies/repas2.webp",         desc: "Repas." },
+                            { name: "repas3.webp",         type: "file", icon: "🖼️", galleryPath: "hobbies/repas3.webp",         desc: "Repas." },
+                            { name: "repas4.webp",         type: "file", icon: "🖼️", galleryPath: "hobbies/repas4.webp",         desc: "Repas." },
+                        ],
+                    },
+                ],
+            },
+
+            // ——— CV ———
+            {
+                name: "CV.pdf",
+                type: "file",
+                icon: "📄",
+                cat: "proj",
+                desc: "Curriculum vitae — parcours, compétences et expériences.",
+            },
+
+            // ——— Projets (le plus important pour un portfolio) ———
+            {
+                name: "Projets",
+                type: "folder",
+                icon: "🗂️",
+                desc: "Projets concrets, rapports de stage et livrables de fin d'études.",
+                children: [
+                    {
+                        name: "CapstoneML.pdf",
+                        type: "file",
+                        icon: "🗂️",
+                        cat: "proj,ia",
+                        desc: "Projet final (capstone) de Machine Learning, de la conception au déploiement.",
+                    },
+                    {
+                        name: "drone_detection_deployment.pdf",
+                        type: "file",
+                        icon: "🗂️",
+                        cat: "proj,ia",
+                        desc: "Déploiement d'IA via Kubernetes avec pipeline CI/CD.",
+                    },
+                    {
+                        name: "RapportStageHeadmind_2025.pdf",
+                        type: "file",
+                        icon: "🗂️",
+                        cat: "proj",
+                        desc: "Rapport de stage chez Headmind (2025) : missions, compétences et résultats.",
+                    },
+                    {
+                        name: "Rapport_de_stage_Okayo.pdf",
+                        type: "file",
+                        icon: "🗂️",
+                        cat: "proj",
+                        desc: "Rapport de stage chez Okayo (2024) : mission, environnement et bilan d'apprentissage.",
+                    },
+                ],
+            },
+
+            // ——— Recherches ———
+            {
+                name: "Recherches",
+                type: "folder",
+                icon: "📚",
+                desc: "Analyses et travaux de recherche exploratoires.",
+                children: [
+                    {
+                        name: "Automate_reverse_engineering_IA.pdf",
+                        type: "file",
+                        icon: "📚",
+                        cat: "rech,cyber,ia",
+                        desc: "Recherche sur l'automatisation du reverse engineering à l'aide de l'IA.",
+                    },
+                    {
+                        name: "DataAnalysis.pdf",
+                        type: "file",
+                        icon: "📚",
+                        cat: "rech,ia",
+                        desc: "Étude et analyse de données : exploration, visualisation, interprétation.",
+                    },
+                ],
+            },
+
+            // ——— Cybersécurité ———
+            {
+                name: "Cybersécurité",
+                type: "folder",
+                icon: "🛡️",
+                desc: "Write-ups CTF, projets de hacking et reverse engineering.",
+                children: [
+                    {
+                        name: "AI_CTF_Write_up.pdf",
+                        type: "file",
+                        icon: "🚩",
+                        cat: "cyber,ia",
+                        desc: "Write-up de challenges CTF orienté Intelligence Artificielle. Challenges créés par mes soins.",
+                    },
+                    {
+                        name: "Hack_ROAM.pdf",
+                        type: "file",
+                        icon: "🛡️",
+                        cat: "cyber",
+                        desc: "Rapport d'exploitation autour de l'outil Roam lors d'un hackathon.",
+                    },
+                ],
+            },
+
+            // ——— IA (supports théoriques uniquement) ———
+            {
+                name: "IA",
+                type: "folder",
+                icon: "🧠",
+                desc: "Cours, exercices et bases théoriques en Machine Learning et Deep Learning.",
+                children: [
+                    {
+                        name: "DeepLearning.pdf",
+                        type: "file",
+                        icon: "🧠",
+                        cat: "ia",
+                        desc: "Support de cours / notes sur les réseaux de neurones et le Deep Learning.",
+                    },
+                    {
+                        name: "SupervisedML.pdf",
+                        type: "file",
+                        icon: "🧠",
+                        cat: "ia",
+                        desc: "Synthèse sur l'apprentissage supervisé (classification, régression).",
+                    },
+                    {
+                        name: "LinearML.pdf",
+                        type: "file",
+                        icon: "🧠",
+                        cat: "ia",
+                        desc: "Notes sur les modèles linéaires en Machine Learning (régression linéaire, logistique).",
+                    },
+                    {
+                        name: "Premiere_IA_Maths.pdf",
+                        type: "file",
+                        icon: "🧠",
+                        cat: "ia",
+                        desc: "Bases mathématiques nécessaires à l'IA : algèbre linéaire, probabilités, optimisation. Dans un projet de reconnaissance de langue des signes.",
+                    },
+                ],
+            },
+        ],
+    };
+
+    let path = [FS];       // pile du chemin courant (racine incluse)
+    let history = [];      // historique pour bouton "précédent"
+    let selected = null;
+
+    const $grid   = document.getElementById('grid');
+    const $crumb  = document.getElementById('breadcrumb');
+    const $side   = document.getElementById('sidebar');
+    const $empty  = document.getElementById('empty-msg');
+    const $count  = document.getElementById('status-count');
+    const $back   = document.getElementById('btn-back');
+    const $up     = document.getElementById('btn-up');
+    const $search = document.getElementById('search-box');
+    const $tooltip = document.getElementById('tooltip');
+
+    function currentFolder() { return path[path.length - 1]; }
+
+    function goTo(newPath, pushHistory = true) {
+        if (pushHistory) history.push([...path]);
+        path = newPath;
+        selected = null;
+        render();
+    }
+
+    function goUp() {
+        if (path.length > 1) goTo(path.slice(0, -1));
+    }
+
+    function goBack() {
+        if (history.length) {
+            path = history.pop();
+            selected = null;
+            render();
+        }
+    }
+
+    /* ---- Rendu breadcrumb ---- */
+    function renderBreadcrumb() {
+        $crumb.innerHTML = "";
+        path.forEach((node, i) => {
+            const c = document.createElement('span');
+            c.className = 'crumb' + (i === path.length - 1 ? ' current' : '');
+            c.textContent = node.name;
+            c.onclick = () => goTo(path.slice(0, i + 1));
+            $crumb.appendChild(c);
+            if (i < path.length - 1) {
+                const sep = document.createElement('span');
+                sep.className = 'crumb-sep';
+                sep.textContent = '/';
+                $crumb.appendChild(sep);
+            }
+        });
+    }
+
+    /* ---- Tooltip au survol ---- */
+    function fakeSize(node) {
+        let h = 0;
+        for (const c of node.name) h = (h * 31 + c.charCodeAt(0)) % 900;
+        const mo = (1 + (h % 400) / 100).toFixed(2);
+        return mo + " Mo";
+    }
+    function fakeDate(node) {
+        let h = 0;
+        for (const c of node.name) h = (h * 17 + c.charCodeAt(0)) % 28;
+        const day = 1 + h;
+        return `${String(day).padStart(2,'0')}/08/2026`;
+    }
+
+    function showTooltip(node, el) {
+        const safeName = escapeHtml(node.name);
+        const safeDesc = escapeHtml(node.desc || '');
+        if (node.type === 'folder') {
+            $tooltip.innerHTML = `
+                <div class="tt-title">${safeName}</div>
+                <div class="tt-row"><b>Type :</b> Dossier</div>
+                <div class="tt-row"><b>Éléments :</b> ${(node.children||[]).length}</div>
+                <div class="tt-summary">${safeDesc}</div>
+            `;
+        } else {
+            const cat = CAT_COLORS[node.cat];
+            $tooltip.innerHTML = `
+                <div class="tt-title">${safeName}</div>
+                <div class="tt-row"><b>Type :</b> ${node.galleryPath ? 'Image' : 'PDF Document'}</div>
+                <div class="tt-row"><b>Taille :</b> ${fakeSize(node)}</div>
+                <div class="tt-row"><b>Modifié :</b> ${fakeDate(node)}</div>
+                ${cat ? `<div class="tt-row"><b>Catégorie :</b> <span style="color:${cat.color}">${cat.label}</span></div>` : ''}
+                <div class="tt-summary">${safeDesc || 'Aucun résumé disponible.'}</div>
+            `;
+        }
+        $tooltip.style.display = 'block';
+        positionTooltip(el);
+    }
+
+    function positionTooltip(el) {
+        const r = el.getBoundingClientRect();
+        let left = r.right + 12;
+        let top = r.top;
+        const tw = 300, th = $tooltip.offsetHeight || 100;
+        if (left + tw > window.innerWidth) left = r.left - tw - 12;
+        if (top + th > window.innerHeight) top = window.innerHeight - th - 10;
+        $tooltip.style.left = left + 'px';
+        $tooltip.style.top = top + 'px';
+    }
+
+    function hideTooltip() {
+        $tooltip.style.display = 'none';
+    }
+
+    /* ---- Rendu grille principale ---- */
+    function renderGrid() {
+        $grid.innerHTML = "";
+        const items = currentFolder().children || [];
+        $empty.style.display = items.length ? 'none' : 'block';
+        $count.textContent = items.length + (items.length > 1 ? " éléments" : " élément");
+
+        items.forEach(node => {
+            const el = document.createElement('div');
+            el.className = 'item ' + (node.type === 'folder' ? 'folder' : 'file');
+            const cat = node.cat ? CAT_COLORS[node.cat] : null;
+            el.innerHTML = `
+            <div class="icon">${node.icon || (node.type === 'folder' ? '📁' : '📄')}</div>
+            <div class="name">${escapeHtml(node.name)}</div>
+            ${cat ? `<div class="cat-tag" style="color:${cat.color};border-color:${cat.color}66;">${cat.label}</div>` : ''}
+            ${node.soon ? '<div class="badge-soon">bientôt</div>' : ''}
+        `;
+            el.onclick = () => {
+                document.querySelectorAll('.item.selected').forEach(x => x.classList.remove('selected'));
+                el.classList.add('selected');
+                selected = node;
+            };
+            el.ondblclick = () => {
+                if (node.type === 'folder') {
+                    goTo([...path, node]);
+                } else {
+                    openFile(node);
+                }
+            };
+            el.addEventListener('mouseenter', () => showTooltip(node, el));
+            el.addEventListener('mousemove', () => positionTooltip(el));
+            el.addEventListener('mouseleave', hideTooltip);
+            $grid.appendChild(el);
+        });
+    }
+
+    /* ---- Rendu sidebar (arborescence complète) ---- */
+    function buildSidebarTree(node, container, depth, ancestry) {
+        const folders = (node.children || []).filter(c => c.type === 'folder');
+        if (!folders.length) return;
+
+        folders.forEach(f => {
+            const fullPath = [...ancestry, f];
+            const row = document.createElement('div');
+            row.className = 'side-item';
+            const hasSub = (f.children || []).some(c => c.type === 'folder');
+
+            row.innerHTML = `
+            <span class="chev">${hasSub ? '▸' : ''}</span>
+            <span class="ic">${f.icon || '📁'}</span>
+            <span class="lbl">${escapeHtml(f.name)}</span>
+        `;
+            row.onclick = (e) => {
+                e.stopPropagation();
+                goTo(fullPath);
+                highlightSidebar();
+                if (hasSub) {
+                    row.classList.toggle('open');
+                    childrenBox.classList.toggle('expanded');
+                }
+            };
+            row.addEventListener('mouseenter', () => { if (f.desc) showTooltip(f, row); });
+            row.addEventListener('mousemove', () => { if (f.desc) positionTooltip(row); });
+            row.addEventListener('mouseleave', hideTooltip);
+            container.appendChild(row);
+
+            const childrenBox = document.createElement('div');
+            childrenBox.className = 'side-children';
+            container.appendChild(childrenBox);
+
+            if (hasSub) buildSidebarTree(f, childrenBox, depth + 1, fullPath);
+
+            row.dataset.key = fullPath.map(p => p.name).join('/');
+        });
+    }
+
+    function highlightSidebar() {
+        const key = path.map(p => p.name).join('/');
+        document.querySelectorAll('#sidebar .side-item').forEach(el => {
+            el.classList.toggle('active', el.dataset.key === key);
+        });
+    }
+
+    function renderSidebar() {
+        $side.innerHTML = "";
+
+        const homeRow = document.createElement('div');
+        homeRow.className = 'side-item';
+        homeRow.innerHTML = `<span class="chev"></span><span class="ic">🏠</span><span class="lbl">Home</span>`;
+        homeRow.dataset.key = "Home";
+        homeRow.onclick = () => { goTo([FS]); highlightSidebar(); };
+        $side.appendChild(homeRow);
+
+        const label = document.createElement('div');
+        label.className = 'side-label';
+        label.textContent = 'Emplacements';
+        $side.appendChild(label);
+
+        buildSidebarTree(FS, $side, 0, [FS]);
+        highlightSidebar();
+    }
+
+    /* ---- Boutons toolbar ---- */
+    $up.onclick = goUp;
+    $back.onclick = goBack;
+
+    function refreshToolbarState() {
+        $up.classList.toggle('disabled', path.length <= 1);
+        $back.classList.toggle('disabled', history.length === 0);
+    }
+
+    /* ---- Recherche (filtre le dossier courant) ---- */
+    $search.addEventListener('input', () => {
+        const q = $search.value.trim().toLowerCase();
+        document.querySelectorAll('#grid .item').forEach(el => {
+            const name = el.querySelector('.name').textContent.toLowerCase();
+            el.style.display = name.includes(q) ? 'flex' : 'none';
+        });
+    });
+
+    // Chemin de fallback pour les fichiers SANS galleryPath (ex: PDF) :
+    // reconstruit un chemin /assets/files|photos/<nom> comme avant.
+    function pathForNode(node) {
+        const ext = (node.name.split('.').pop() || '').toLowerCase();
+        const folder = ['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'].includes(ext) ? 'photos' : 'files';
+        return `/assets/${folder}/${encodeURIComponent(node.name)}`;
+    }
+
+    function openFile(node) {
+        if (node.soon) return; // placeholder "bientôt disponible" : rien à ouvrir
+
+        try {
+            // Fichier image lié à la Galerie : on ouvre galerie.html
+            // directement sur CETTE photo plutôt qu'un aperçu générique.
+            if (node.galleryPath) {
+                if (typeof window.parent?.openGalleryPhoto !== 'function') return;
+                window.parent.openGalleryPhoto(node.galleryPath);
+                return;
+            }
+
+            if (typeof window.parent?.openFile !== 'function') return;
+            window.parent.openFile(pathForNode(node), { desc: node.desc, title: node.name });
+        } catch (err) {
+            console.warn('openFile: impossible de contacter la fenêtre parente (sandbox iframe ?)', err);
+        }
+    }
+
+    function render() {
+        renderBreadcrumb();
+        renderGrid();
+        renderSidebar();
+        refreshToolbarState();
+        $search.value = "";
+        hideTooltip();
+    }
+
+    render();
+</script>
+
+</body>
+</html>

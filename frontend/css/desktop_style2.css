@@ -1,0 +1,462 @@
+/* ====================== VARIABLES ====================== */
+:root {
+    --c-accent:    #00e5d8;
+    --c-accent2:   #00ffaa;
+    --c-bg:        rgba(15, 15, 25, 0.96);
+    --c-bg-deep:   rgba(10, 15, 26, 1);
+    --c-bg-win:    rgba(18, 22, 32, 0.96);
+    --c-bg-menu:   rgba(15, 18, 28, 0.97);
+    --c-text:      #e0ffff;
+    --c-border:    rgba(0, 229, 216, 0.3);
+    --c-hover:     rgba(0, 229, 216, 0.2);
+    --c-hover-bg:  rgba(0, 229, 216, 0.25);
+    --c-danger:    #ff5555;
+    --shadow-win:  0 15px 35px rgba(0,0,0,.7);
+    --radius:      8px;
+    --font-mono:   'VT323', monospace;
+    --tr:          0.2s ease;
+}
+
+/* ====================== TOP PANEL ====================== */
+#top-panel {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 38px;
+    background: var(--c-bg);
+    backdrop-filter: blur(10px);
+    border-bottom: 2px solid var(--c-accent);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    z-index: 500;
+    font-family: var(--font-mono);
+    font-size: 17px;
+    color: var(--c-text);
+    box-shadow: 0 2px 8px rgba(0,229,216,.2);
+    user-select: none;
+}
+
+.panel-left, .panel-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+}
+
+#parrot-menu {
+    font-size: 22px;
+    padding: 0 12px;
+    font-weight: bold;
+    color: var(--c-accent2);
+    text-shadow: 0 0 8px var(--c-accent2);
+    cursor: pointer;
+}
+
+.panel-button, .panel-item {
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all var(--tr);
+}
+.panel-button { padding: 6px 14px; }
+.panel-button:hover,
+.panel-item:hover {
+    background: var(--c-hover-bg);
+    color: white;
+    text-shadow: 0 0 6px var(--c-accent);
+}
+
+.panel-separator {
+    width: 2px;
+    height: 24px;
+    background: var(--c-border);
+    margin: 0 8px;
+}
+
+/* ====================== BUREAU ====================== */
+.desktop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    overflow: hidden;
+    background: #0a0c10;
+}
+
+.desktop .desktop-bg {
+    position: absolute;
+    inset: 0;
+    background: url('/assets/background/background.png') center/cover no-repeat;
+    z-index: -1;
+    filter: brightness(.92);
+}
+
+#desktop {
+    position: absolute;
+    top: 38px; left: 0; right: 0; bottom: 0;
+    padding: 20px 30px 30px;
+    box-sizing: border-box;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.desktop-icon {
+    position: absolute;
+    width: 100px;
+    text-align: center;
+    color: white;
+    text-shadow: 1px 1px 3px black;
+    cursor: pointer;
+    user-select: none;
+    padding: 10px;
+    transition: background var(--tr);
+}
+.desktop-icon:hover  { background: rgba(255,255,255,.25); }
+.desktop-icon img    { width: 52px; height: 52px; image-rendering: pixelated; }
+.desktop-icon span   { display: block; margin-top: 8px; font-size: .88rem; }
+
+/* ====================== FENÊTRES ====================== */
+.window {
+    position: absolute;
+    background: var(--c-bg-win);
+    border: 2px solid var(--c-accent);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-win);
+    overflow: hidden;
+    min-width: 420px;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+    will-change: transform;
+    /*
+     * On n'anime PAS width/height en permanence : le resize JS modifie ces
+     * propriétés à chaque pointermove — les animer causerait du lag.
+     * L'animation maximize/restore est activée temporairement via .animating.
+     */
+    transition:
+            border-radius .35s ease,
+            box-shadow    .35s ease,
+            transform     .25s ease,
+            opacity       .25s ease;
+}
+
+/*
+ * Classe temporaire ajoutée UNIQUEMENT pendant maximize/restore (pas pendant resize).
+ * Elle réactive width/height dans la transition pour que l'animation soit fluide.
+ */
+.window.animating {
+    transition:
+            top           .32s cubic-bezier(.4,0,.2,1),
+            left          .32s cubic-bezier(.4,0,.2,1),
+            width         .32s cubic-bezier(.4,0,.2,1),
+            height        .32s cubic-bezier(.4,0,.2,1),
+            border-radius .32s ease,
+            box-shadow    .32s ease !important;
+}
+
+/* Désactive toutes transitions pendant drag/resize */
+.window.no-transition {
+    transition: none !important;
+    animation: none !important;
+}
+
+/* Coin resize */
+.window::after {
+    content: '';
+    position: absolute;
+    right: 0; bottom: 0;
+    width: 22px; height: 22px;
+    cursor: nwse-resize;
+    z-index: 30;
+    background: linear-gradient(-45deg, transparent 40%, var(--c-accent) 40%, var(--c-accent) 60%, transparent 60%);
+    opacity: .3;
+    transition: opacity var(--tr);
+}
+.window:hover::after { opacity: .6; }
+
+/* ---- États ---- */
+.window.maximized {
+    top: 38px !important; left: 0 !important;
+    width: 100% !important;
+    height: calc(100vh - 38px) !important;
+    border-radius: 0 !important;
+    resize: none !important;
+    box-shadow: 0 5px 20px rgba(0,0,0,.6) !important;
+}
+.window.minimizing {
+    transform: scale(.75) translateY(40px);
+    opacity: 0;
+    pointer-events: none;
+}
+.window.minimized { display: none !important; }
+
+/* ---- Title bar ---- */
+.title-bar {
+    height: 36px;
+    flex-shrink: 0;
+    background: linear-gradient(to right, #0f1621, #1a2538);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    color: var(--c-text);
+    font-size: 17px;
+    cursor: move;
+    user-select: none;
+    border-bottom: 1px solid var(--c-accent);
+}
+
+.title-text {
+    flex: 1;
+    padding-left: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--font-mono);
+}
+
+.title-buttons { display: flex; gap: 4px; }
+
+.title-buttons button {
+    width: 26px; height: 26px;
+    margin-left: 6px;
+    background: transparent;
+    border: none;
+    color: var(--c-text);
+    font-size: 18px;
+    cursor: pointer;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background var(--tr);
+}
+.title-buttons button:hover { background: rgba(255,60,60,.3); }
+.close-btn:hover             { background: var(--c-danger) !important; color: white; }
+
+/* ---- Contenu ---- */
+.window-content {
+    flex: 1;
+    overflow: hidden;
+    background: var(--c-bg-deep);
+}
+
+.window-content iframe {
+    width: 100%; height: 100%;
+    border: none; display: block;
+}
+
+/* ====================== DIALOGUES ====================== */
+.dialog-window .window-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.dialog-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 30px 35px 10px;
+    font-size: 17.5px;
+    line-height: 1.55;
+    color: var(--c-text);
+    min-height: 80px;
+}
+
+.dialog-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    padding: 12px 0 16px;
+    flex-shrink: 0;
+}
+
+.dialog-btn {
+    padding: 9px 28px;
+    min-width: 110px;
+    font-family: var(--font-mono);
+    font-size: 17px;
+    border: 2px solid var(--c-accent);
+    background: rgba(15,22,36,.95);
+    color: var(--c-text);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all var(--tr);
+}
+.dialog-btn:hover         { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,229,216,.3); }
+.dialog-btn.default:hover { background: var(--c-hover); }
+.dialog-btn.danger        { border-color: var(--c-danger); color: #ffcccc; }
+.dialog-btn.danger:hover  { background: rgba(255,85,85,.25); border-color: #ff7777; }
+
+/* ====================== BARRE DES TÂCHES ====================== */
+.panel-taskbar {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: none;
+    height: 100%;
+}
+.panel-taskbar::-webkit-scrollbar { display: none; }
+
+.taskbar-item {
+    background: rgba(15,22,36,.95);
+    border: 1px solid var(--c-accent);
+    color: var(--c-text);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 15px;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: all var(--tr);
+}
+.taskbar-item:hover  { background: var(--c-hover-bg); }
+.taskbar-item.active {
+    background: rgba(0,229,216,.4);
+    border-color: #00ffc3;
+    box-shadow: 0 0 8px rgba(0,229,216,.5);
+}
+
+/* ====================== APP ITEM (base commune) ====================== */
+.app-item {
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    font-size: 17px;
+    transition: all .15s;
+}
+.app-item:hover { background: var(--c-hover-bg); }
+.app-item img   { width: 42px; height: 42px; image-rendering: pixelated; }
+
+/* ====================== POPUP MENUS ====================== */
+.popup-menu {
+    position: absolute;
+    background: rgba(15,18,32,.97);
+    border: 2px solid var(--c-accent);
+    border-radius: 10px;
+    box-shadow: 0 15px 35px rgba(0,0,0,.75);
+    overflow: hidden;
+    z-index: 10000;
+    font-family: var(--font-mono);
+    user-select: none;
+    backdrop-filter: blur(12px);
+    min-width: 340px;
+}
+
+.popup-menu-header {
+    background: linear-gradient(to right, #0f1621, #1a2538);
+    padding: 10px 16px;
+    color: var(--c-accent2);
+    font-size: 19px;
+    border-bottom: 1px solid var(--c-accent);
+}
+
+.popup-menu-content {
+    padding: 12px 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.popup-menu .app-item {
+    padding: 14px 16px;
+    border-radius: 6px;
+    gap: 12px;
+}
+.popup-menu .app-item:hover { transform: translateX(4px); }
+
+/* ====================== START MENU ====================== */
+#start-menu {
+    position: absolute;
+    top: 48px; left: 8px;
+    width: 250px;
+    background: var(--c-bg-menu);
+    border: 2px solid var(--c-accent);
+    border-radius: var(--radius);
+    box-shadow: 0 10px 40px rgba(0,0,0,.7);
+    overflow: hidden;
+    z-index: 10000;
+    font-size: 18px;
+    color: var(--c-text);
+    animation: menuPop .22s cubic-bezier(0.23,1,0.32,1);
+}
+
+.start-menu-header {
+    background: linear-gradient(to right, rgba(0,229,216,.15), rgba(0,255,170,.08));
+    padding: 14px 20px;
+    font-family: var(--font-mono);
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--c-accent2);
+    text-shadow: 0 0 8px var(--c-accent2);
+    border-bottom: 1px solid var(--c-border);
+    letter-spacing: 1px;
+    user-select: none;
+}
+
+.start-menu-content {
+    padding: 8px 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.start-menu .app-item        { padding: 14px 16px; border-radius: 6px; }
+.start-menu .app-item:hover  { transform: translateX(4px); }
+
+@keyframes menuPop {
+    from { opacity: 0; transform: scale(.95) translateY(-15px); }
+    to   { opacity: 1; transform: scale(1)  translateY(0); }
+}
+
+/* ====================== USER PILL ====================== */
+#user-pill {
+    background: rgba(0,229,216,.08);
+    border: 1px solid var(--c-border);
+    border-radius: 20px;
+    padding: 3px 12px;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all var(--tr);
+    letter-spacing: .5px;
+}
+#user-pill:hover {
+    background: var(--c-hover-bg);
+    border-color: var(--c-accent);
+    box-shadow: 0 0 8px rgba(0,229,216,.3);
+}
+
+/* ====================== EFFET CRT ====================== */
+body.crt-enabled .desktop::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+            transparent 0px, transparent 2px,
+            rgba(0,255,180,.03) 2px, rgba(0,255,180,.03) 4px
+    );
+    z-index: 1;
+    animation: crt-scan 6s linear infinite;
+}
+body.crt-enabled         { filter: contrast(1.1) brightness(1.05); }
+body.crt-enabled .window { filter: contrast(1.15) brightness(1.08); }
+
+@keyframes crt-scan {
+    from { transform: translateY(-100%); }
+    to   { transform: translateY(100%); }
+}

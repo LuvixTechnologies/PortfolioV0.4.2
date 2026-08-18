@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Bloc d'herbe Minecraft 3D</title>
+
+    <link rel="icon" type="image/png" href="assets/logo.png">
+    <link rel="apple-touch-icon" href="assets/logo.png">
+
+    <!-- KaTeX (maths jolies) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+            onload="renderMathInElement(document.body, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false}
+                ]
+            });"></script>
+
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{background:#1a1a2e;display:flex;flex-direction:column;align-items:center;min-height:100vh;font-family:'Courier New',monospace;overflow-x:hidden}
+        #app{width:100%;max-width:860px;padding:0 0 2rem}
+        .toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:14px 16px;background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.08);align-items:center}
+        .btn{padding:6px 13px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-family:'Courier New',monospace;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.6);border-radius:4px;cursor:pointer;transition:all .15s;white-space:nowrap}
+        .btn:hover{background:rgba(255,255,255,0.1);color:#fff;border-color:rgba(255,255,255,0.35)}
+        .btn.active{background:#5d9e32;color:#fff;border-color:#5d9e32}
+        .btn.info-btn{border-color:#4a7fcb;color:#7aabf0}
+        .btn.info-btn:hover{background:rgba(74,127,203,0.2)}
+        .separator{width:1px;height:20px;background:rgba(255,255,255,0.12);margin:0 2px}
+        .demo-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.25);padding:0 4px}
+        canvas{display:block;image-rendering:pixelated;cursor:grab;margin:0 auto}
+        canvas:active{cursor:grabbing}
+        .hud{color:rgba(255,255,255,0.3);font-size:11px;letter-spacing:.08em;text-transform:uppercase;text-align:center;padding:10px 0 0}
+
+        /* Info page */
+        #info-page{display:none;padding:2rem 1.5rem;color:rgba(255,255,255,.85);line-height:1.75}
+        #info-page h1{font-size:22px;color:#5d9e32;margin-bottom:.8rem}
+        #info-page h2{font-size:15px;color:#7aabf0;margin:2.2rem 0 .7rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid rgba(122,171,240,.25);padding-bottom:4px}
+        #info-page h3{font-size:13px;color:#aee05a;margin:1.4rem 0 .5rem}
+        #info-page p{font-size:14px;color:rgba(255,255,255,.68);margin-bottom:.9rem}
+        #info-page ul, #info-page ol{margin:0.5rem 0 1.1rem 1.5rem;color:rgba(255,255,255,.68);font-size:14px}
+        #info-page li{margin-bottom:0.4rem}
+
+        #info-page code{font-family:'Courier New',monospace;background:rgba(0,0,0,.4);padding:2px 6px;border-radius:4px;font-size:12.5px;color:#aee05a}
+        #info-page pre{background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:14px 16px;font-size:12.5px;overflow-x:auto;margin:1rem 0 1.4rem;line-height:1.5;color:rgba(255,255,255,.78)}
+
+        /* Math blocks */
+        #info-page .katex-display{margin:1.2rem 0;overflow-x:auto;overflow-y:hidden}
+        #info-page .note{font-size:12.5px;color:rgba(255,255,255,.45);border-left:3px solid #4a7fcb;padding:8px 0 8px 14px;margin:1.2rem 0;background:rgba(74,127,203,.06);border-radius:0 6px 6px 0}
+
+        #loading{color:#5d9e32;font-size:13px;letter-spacing:.1em;padding:2rem;text-align:center}
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="toolbar">
+        <span class="demo-label">Mode</span>
+        <button class="btn active" id="btn-texture" onclick="setMode('texture')">Texturé</button>
+        <button class="btn" id="btn-wireframe" onclick="setMode('wireframe')">Squelette</button>
+        <button class="btn" id="btn-xray" onclick="setMode('xray')">Wireframe+Solid</button>
+        <button class="btn" id="btn-normals" onclick="setMode('normals')">Normales</button>
+        <button class="btn" id="btn-depth" onclick="setMode('depth')">Profondeur</button>
+        <button class="btn" id="btn-shading" onclick="setMode('shading')">Éclairage</button>
+        <div class="separator"></div>
+        <button class="btn info-btn" onclick="showInfoPage()">⟩ Explication maths</button>
+    </div>
+    <div id="loading">Chargement des textures…</div>
+    <canvas id="game" width="400" height="400"></canvas>
+    <div class="hud" id="hud-text">Glisser pour tourner &nbsp;·&nbsp; Molette pour zoomer</div>
+
+    <div id="info-page">
+        <button class="btn info-btn" onclick="hideInfoPage()" style="margin-bottom:1.8rem">← Retour à la démo</button>
+
+        <h1>Maths & code — Bloc 3D</h1>
+        <p>Explication d'un cube 3D minecraft d'un point de vue mathématique. Sans Logiciel de rendu.</p>
+        <!-- 1. TRANSFORMATIONS -->
+        <h2>1. Transformations géométriques</h2>
+
+        <h3>Rotations autour de Y puis X</h3>
+        <p>Les sommets sont d’abord tournés autour de l’axe vertical (Y), puis autour de l’axe horizontal (X). L’ordre est important car les rotations ne commutent pas.</p>
+
+        <p>Matrice de rotation autour de l’axe Y (yaw) :</p>
+        $$
+        R_y(\theta) =
+        \begin{pmatrix}
+        \cos\theta & 0 & -\sin\theta \\
+        0 & 1 & 0 \\
+        \sin\theta & 0 & \cos\theta
+        \end{pmatrix}
+        $$
+
+        <p>Matrice de rotation autour de l’axe X (pitch) :</p>
+        $$
+        R_x(\varphi) =
+        \begin{pmatrix}
+        1 & 0 & 0 \\
+        0 & \cos\varphi & \sin\varphi \\
+        0 & -\sin\varphi & \cos\varphi
+        \end{pmatrix}
+        $$
+
+        <p>La composition appliquée à chaque sommet est :</p>
+        $$
+        \mathbf{v}' = R_x(r_x)\, R_y(r_y)\, \mathbf{v}
+        $$
+        <p>suivie d’une pure translation le long de Z :</p>
+        $$
+        \mathbf{v}'' = \mathbf{v}' + (0,\,0,\,d)
+        $$
+
+        <div class="note">
+            Les matrices de rotation sont orthogonales ($R^\top R = I$, $\det R = 1$). Elles conservent les longueurs et les angles orientés.
+        </div>
+
+        <!-- 2. PROJECTION -->
+        <h2>2. Projection perspective (modèle sténopé)</h2>
+
+        <p>La caméra est à l’origine et regarde vers $+Z$. Le plan image se situe à une distance focale $f = 350$ pixels.</p>
+
+        $$
+        x_s = \frac{W}{2} + f \cdot \frac{x}{z} \qquad\qquad
+        y_s = \frac{H}{2} - f \cdot \frac{y}{z}
+        $$
+
+        <p>Interprétation géométrique (triangle de Thalès) : le rayon issu de l’origine et passant par le point $(x,y,z)$ intersecte le plan $z = f$ aux coordonnées $(f\,x/z,\, f\,y/z)$. On centre ensuite ce plan dans l’espace écran.</p>
+
+        <p>La focale $f$ contrôle le champ de vision :</p>
+        <ul>
+            <li>$f$ grand → téléobjectif (peu de distorsion)</li>
+            <li>$f$ petit → grand-angle (fort raccourci perspective)</li>
+        </ul>
+
+        <!-- 3. BACKFACE CULLING -->
+        <h2>3. Backface culling</h2>
+
+        <p>On calcule la normale de la face dans l’espace caméra par produit vectoriel de deux arêtes :</p>
+
+        $$
+        \mathbf{N} = \overrightarrow{AB} \times \overrightarrow{AC}
+        $$
+
+        <p>Le test de visibilité se réduit à :</p>
+        $$
+        \text{visible} \iff N_z < 0
+        $$
+
+        <p>Après transformation, la caméra regarde vers $+Z$. Une face orientée vers la caméra a sa normale pointant globalement vers $-Z$, d’où $N_z < 0$. Les faces arrière sont purement ignorées (économie ≈ 50 % des pixels).</p>
+
+        <div class="note">
+            On utilise les sommets <em>après</em> rotation + translation. Cela permet de gérer correctement les rotations arbitraires sans transformer les normales avec la matrice inverse-transposée.
+        </div>
+
+        <!-- 4. TEXTURE MAPPING -->
+        <h2>4. Homographie & texture mapping perspective-correct</h2>
+
+        <p>Canvas 2D ne propose que des transformations affines (6 degrés de liberté). Une face projetée est un quadrilatère quelconque → il faudrait une homographie (8 ddl). On contourne le problème par <strong>subdivision + approximation affine locale</strong>.</p>
+
+        <h3>Principe</h3>
+        <ol>
+            <li>On découpe le quad en une grille $N \times N$ (ici $N = 16$).</li>
+            <li>Pour chaque petit quad on interpole bilinéairement les positions écran <em>et</em> les UV.</li>
+            <li>On résout le système affine $2\times3$ qui envoie le rectangle UV source vers le petit quad destination.</li>
+            <li>On clippe au petit quad et on dessine avec <code>ctx.transform(a,b,c,d,e,f)</code>.</li>
+        </ol>
+
+        <p>On cherche la matrice affine :</p>
+        $$
+        \begin{pmatrix} a & c & e \\ b & d & f \end{pmatrix}
+        \begin{pmatrix} u \\ v \\ 1 \end{pmatrix}
+        =
+        \begin{pmatrix} x \\ y \end{pmatrix}
+        $$
+
+        <p>telle que les trois coins $(u_0,v_0)\to(x_0,y_0)$, $(u_1,v_1)\to(x_1,y_1)$, $(u_3,v_3)\to(x_3,y_3)$ soient respectés. Plus $N$ est grand, plus l’approximation de l’homographie est précise.</p>
+
+        <div class="note">
+            C’est exactement la technique utilisée par les logiciels 2D avant l’arrivée généralisée des GPU (années 90). Aujourd’hui WebGL fait la même chose en hardware avec l’interpolation perspective des attributs.
+        </div>
+
+        <!-- 5. TRI -->
+        <h2>5. Tri des faces (Painter’s algorithm)</h2>
+        <p>Les faces visibles sont triées par profondeur moyenne décroissante :</p>
+        $$
+        \text{depth}(face) = \frac{1}{4}\sum_{i\in face} z_i
+        $$
+        <p>On dessine d’abord les faces les plus lointaines. Comme le cube est convexe, le Painter’s algorithm ne produit jamais d’artefacts d’ordre.</p>
+
+        <!-- 6. PIPELINE -->
+        <h2>6. Pipeline complet</h2>
+        <pre>pour chaque face :
+  1. transformer les 4 sommets   (R_y → R_x → +dist)
+  2. calculer la normale         (produit vectoriel)
+  3. backface culling            (N_z < 0 ?)
+  4. projeter les 4 points       (perspective f = 350)
+  5. (mode texture) subdiviser + affine locale + drawImage
+  6. (autres modes) remplir / tracer / afficher normales…</pre>
+
+        <p style="margin-top:2.5rem;color:rgba(255,255,255,.35);font-size:12px">
+            Toutes les formules ci-dessus sont exactement celles implémentées dans le code source de cette page.
+        </p>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.imageSmoothingEnabled = false;
+
+    const VERTS = [
+        [-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],
+        [-1,-1, 1],[1,-1, 1],[1,1, 1],[-1,1, 1]
+    ];
+    const EDGES = [
+        [0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],
+        [0,4],[1,5],[2,6],[3,7]
+    ];
+    const FACES = [
+        {vi:[0,1,5,4],tex:'bottom',uv:[[0,0],[1,0],[1,1],[0,1]],shade:.5,name:'Bottom',normal:[0,-1,0]},
+        {vi:[3,7,6,2],tex:'top',   uv:[[0,0],[1,0],[1,1],[0,1]],shade:1.0,name:'Top',   normal:[0, 1,0]},
+        {vi:[0,3,2,1],tex:'side',  uv:[[0,1],[0,0],[1,0],[1,1]],shade:.8,name:'Nord',   normal:[0, 0,-1]},
+        {vi:[4,5,6,7],tex:'side',  uv:[[1,1],[0,1],[0,0],[1,0]],shade:.8,name:'Sud',    normal:[0, 0, 1]},
+        {vi:[0,4,7,3],tex:'side',  uv:[[1,1],[0,1],[0,0],[1,0]],shade:.6,name:'Ouest',  normal:[-1,0, 0]},
+        {vi:[1,2,6,5],tex:'side',  uv:[[0,1],[0,0],[1,0],[1,1]],shade:.6,name:'Est',    normal:[ 1,0, 0]}
+    ];
+
+    const TEXTURE_SRCS = {
+        top:    'assets/textures/grass_block_top.png',
+        bottom: 'assets/textures/dirt.png',
+        side:   'assets/textures/grass_block_side.png'
+    };
+    const textures = {};
+
+    function makeFallback(key) {
+        const c = document.createElement('canvas'); c.width = c.height = 16;
+        const x = c.getContext('2d');
+        if(key==='top'){ x.fillStyle='#5d9e32'; x.fillRect(0,0,16,16); }
+        else if(key==='bottom'){ x.fillStyle='#7a5c3a'; x.fillRect(0,0,16,16); }
+        else {
+            x.fillStyle='#7a5c3a'; x.fillRect(0,0,16,16);
+            x.fillStyle='#5d9e32'; x.fillRect(0,0,16,4);
+        }
+        for(let i=0;i<8;i++){
+            x.fillStyle=`rgba(0,0,0,${Math.random()*.15})`;
+            x.fillRect(Math.random()*16,Math.random()*16,Math.random()*4+1,Math.random()*4+1);
+        }
+        return c;
+    }
+
+    function loadTextures(cb) {
+        const keys = Object.keys(TEXTURE_SRCS); let n = 0;
+        keys.forEach(k => {
+            const img = new Image(); img.crossOrigin='anonymous';
+            img.src = TEXTURE_SRCS[k];
+            const done = () => { if(++n===keys.length) cb(); };
+            img.onload = () => { textures[k] = img; done(); };
+            img.onerror = () => { textures[k] = makeFallback(k); done(); };
+        });
+    }
+
+    let rx=.45, ry=.65, dist=5.5;
+    let mode = 'texture';
+    const FACE_COLORS = ['#3a7bd5','#5d9e32','#d95f2b','#c94090','#e0b020','#22b5b0'];
+    const NORMAL_COLORS = ['#4488ff','#44ff88','#ff4488','#88ff44','#ff8844','#8844ff'];
+
+    function rotY(v,a){const c=Math.cos(a),s=Math.sin(a);return[v[0]*c-v[2]*s,v[1],v[0]*s+v[2]*c]}
+    function rotX(v,a){const c=Math.cos(a),s=Math.sin(a);return[v[0],v[1]*c+v[2]*s,-v[1]*s+v[2]*c]}
+    function transform(vi){let v=VERTS[vi];v=rotY(v,ry);v=rotX(v,rx);return[v[0],v[1],v[2]+dist]}
+    function transformVec(v){v=rotY(v,ry);v=rotX(v,rx);return v}
+    function project([x,y,z]){const zz=Math.max(z,.1),f=350;return[W/2+(x/zz)*f,H/2-(y/zz)*f]}
+    function faceNormal(face){
+        const[a,b,c]=face.vi.slice(0,3).map(transform);
+        const ab=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],ac=[c[0]-a[0],c[1]-a[1],c[2]-a[2]];
+        return[ab[1]*ac[2]-ab[2]*ac[1],ab[2]*ac[0]-ab[0]*ac[2],ab[0]*ac[1]-ab[1]*ac[0]]
+    }
+    function faceCenter(face){
+        const pts=face.vi.map(transform);
+        return pts.reduce((a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]])[0]
+            ? [pts.reduce((s,p)=>s+p[0],0)/4,pts.reduce((s,p)=>s+p[1],0)/4,pts.reduce((s,p)=>s+p[2],0)/4]
+            : [0,0,dist]
+    }
+    function faceDepth(face){return face.vi.reduce((s,i)=>s+transform(i)[2],0)/4}
+    function isVisible(face){return faceNormal(face)[2]<0}
+
+    function lerpPt(a,b,t){return[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]}
+    function lerpUV(a,b,t){return[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]}
+    const SUBDIVS=16;
+
+    function drawPerspectiveQuad(src,dst,uvs){
+        const[p0,p1,p2,p3]=dst,[u0,u1,u2,u3]=uvs;
+        const N=SUBDIVS,iw=src.width,ih=src.height;
+        for(let row=0;row<N;row++){
+            const t0=row/N,t1=(row+1)/N;
+            const L0=lerpPt(p0,p3,t0),L1=lerpPt(p0,p3,t1);
+            const R0=lerpPt(p1,p2,t0),R1=lerpPt(p1,p2,t1);
+            const LU0=lerpUV(u0,u3,t0),LU1=lerpUV(u0,u3,t1);
+            const RU0=lerpUV(u1,u2,t0),RU1=lerpUV(u1,u2,t1);
+            for(let col=0;col<N;col++){
+                const s0=col/N,s1=(col+1)/N;
+                const q0=lerpPt(L0,R0,s0),q1=lerpPt(L0,R0,s1),q2=lerpPt(L1,R1,s1),q3=lerpPt(L1,R1,s0);
+                const uv0=lerpUV(LU0,RU0,s0),uv1=lerpUV(LU0,RU0,s1),uv2=lerpUV(LU1,RU1,s1),uv3=lerpUV(LU1,RU1,s0);
+                const sx0=uv0[0]*iw,sy0=uv0[1]*ih,sx1=uv1[0]*iw,sy1=uv1[1]*ih,sx3=uv3[0]*iw,sy3=uv3[1]*ih;
+                const det=(sx1-sx0)*(sy3-sy0)-(sx3-sx0)*(sy1-sy0);
+                if(Math.abs(det)<1e-9) continue;
+                const a=((q1[0]-q0[0])*(sy3-sy0)-(q3[0]-q0[0])*(sy1-sy0))/det;
+                const b=((q1[1]-q0[1])*(sy3-sy0)-(q3[1]-q0[1])*(sy1-sy0))/det;
+                const c=((sx1-sx0)*(q3[0]-q0[0])-(sx3-sx0)*(q1[0]-q0[0]))/det;
+                const d=((sx1-sx0)*(q3[1]-q0[1])-(sx3-sx0)*(q1[1]-q0[1]))/det;
+                const e=q0[0]-a*sx0-c*sy0,f=q0[1]-b*sx0-d*sy0;
+                ctx.save();
+                ctx.imageSmoothingEnabled=false;
+                ctx.beginPath();
+                ctx.moveTo(q0[0],q0[1]);ctx.lineTo(q1[0],q1[1]);ctx.lineTo(q2[0],q2[1]);ctx.lineTo(q3[0],q3[1]);
+                ctx.closePath();ctx.clip();
+                ctx.transform(a,b,c,d,e,f);ctx.drawImage(src,0,0);
+                ctx.restore();
+            }
+        }
+    }
+
+    function drawFaceClip(pts2, cb){
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(pts2[0][0],pts2[0][1]);
+        for(let i=1;i<pts2.length;i++) ctx.lineTo(pts2[i][0],pts2[i][1]);
+        ctx.closePath(); ctx.clip(); cb(); ctx.restore();
+    }
+
+    function depthColor(z) {
+        const t = Math.max(0,Math.min(1,(z-2)/(dist+4-2)));
+        const r=Math.round(20+t*200),g=Math.round(80+t*80),b=Math.round(200-t*150);
+        return `rgb(${r},${g},${b})`;
+    }
+
+    function draw() {
+        ctx.fillStyle='#1a1a2e'; ctx.fillRect(0,0,W,H);
+
+        if(mode==='wireframe') {
+            EDGES.forEach(([a,b])=>{
+                const p0=project(transform(a)),p1=project(transform(b));
+                ctx.beginPath();ctx.moveTo(p0[0],p0[1]);ctx.lineTo(p1[0],p1[1]);
+                ctx.strokeStyle='#5d9e32';ctx.lineWidth=1.8;ctx.stroke();
+            });
+            VERTS.forEach((v,i)=>{
+                const p=project(transform(i));
+                ctx.beginPath();ctx.arc(p[0],p[1],3.5,0,Math.PI*2);
+                ctx.fillStyle='#aee05a';ctx.fill();
+            });
+            FACES.forEach((face,fi)=>{
+                const pts3=face.vi.map(transform),pts2=pts3.map(project);
+                const cx=pts2.reduce((s,p)=>s+p[0],0)/4,cy=pts2.reduce((s,p)=>s+p[1],0)/4;
+                ctx.fillStyle='rgba(93,158,50,.12)';
+                ctx.beginPath();ctx.moveTo(pts2[0][0],pts2[0][1]);
+                pts2.slice(1).forEach(p=>ctx.lineTo(p[0],p[1]));
+                ctx.closePath();ctx.fill();
+            });
+            return;
+        }
+
+        const sorted=[...FACES].sort((a,b)=>faceDepth(b)-faceDepth(a));
+
+        sorted.forEach((face,fi)=>{
+            const n=faceNormal(face);
+            const visible=n[2]<0;
+            const pts3=face.vi.map(transform);
+            const pts2=pts3.map(project);
+
+            if(mode==='xray'){
+                ctx.beginPath();ctx.moveTo(pts2[0][0],pts2[0][1]);
+                pts2.slice(1).forEach(p=>ctx.lineTo(p[0],p[1]));
+                ctx.closePath();
+                ctx.fillStyle=visible?`rgba(93,158,50,.18)`:`rgba(93,158,50,.04)`;
+                ctx.fill();
+                ctx.strokeStyle=visible?'rgba(174,224,90,.9)':'rgba(93,158,50,.3)';
+                ctx.lineWidth=visible?1.5:.8;ctx.setLineDash(visible?[]:[4,4]);
+                ctx.stroke();ctx.setLineDash([]);
+                return;
+            }
+
+            if(!visible) return;
+
+            if(mode==='texture'){
+                drawPerspectiveQuad(textures[face.tex],pts2,face.uv);
+                ctx.save();
+                ctx.beginPath();ctx.moveTo(pts2[0][0],pts2[0][1]);
+                pts2.slice(1).forEach(p=>ctx.lineTo(p[0],p[1]));
+                ctx.closePath();
+                ctx.fillStyle=`rgba(0,0,0,${(1-face.shade)*.7})`;
+                ctx.fill();
+                ctx.strokeStyle='rgba(0,0,0,.9)';ctx.lineWidth=1.5;ctx.lineJoin='round';
+                ctx.stroke();ctx.restore();
+            }
+            else if(mode==='shading'){
+                ctx.save();
+                ctx.beginPath();ctx.moveTo(pts2[0][0],pts2[0][1]);
+                pts2.slice(1).forEach(p=>ctx.lineTo(p[0],p[1]));
+                ctx.closePath();
+                const br=Math.round(face.shade*220);
+                ctx.fillStyle=`rgb(${br},${Math.round(br*.9)},${Math.round(br*.7)})`;
+                ctx.fill();
+                ctx.strokeStyle='rgba(0,0,0,.6)';ctx.lineWidth=1;ctx.stroke();
+                ctx.restore();
+                ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='bold 11px monospace';ctx.textAlign='center';
+                const cx=pts2.reduce((s,p)=>s+p[0],0)/4,cy=pts2.reduce((s,p)=>s+p[1],0)/4;
+                ctx.fillText(Math.round(face.shade*100)+'%',cx,cy+4);
+            }
+            else if(mode==='depth'){
+                ctx.save();
+                ctx.beginPath();ctx.moveTo(pts2[0][0],pts2[0][1]);
+                pts2.slice(1).forEach(p=>ctx.lineTo(p[0],p[1]));
+                ctx.closePath();
+                ctx.fillStyle=depthColor(faceDepth(face));
+                ctx.fill();
+                ctx.strokeStyle='rgba(0,0,0,.4)';ctx.lineWidth=1;ctx.stroke();
+                ctx.restore();
+                ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='11px monospace';ctx.textAlign='center';
+                const cx=pts2.reduce((s,p)=>s+p[0],0)/4,cy=pts2.reduce((s,p)=>s+p[1],0)/4;
+                ctx.fillText('z='+faceDepth(face).toFixed(2),cx,cy+4);
+            }
+            else if(mode==='normals'){
+                ctx.save();
+                ctx.beginPath();ctx.moveTo(pts2[0][0],pts2[0][1]);
+                pts2.slice(1).forEach(p=>ctx.lineTo(p[0],p[1]));
+                ctx.closePath();
+                ctx.fillStyle=FACE_COLORS[FACES.indexOf(face)]+'44';
+                ctx.fill();
+                ctx.strokeStyle=FACE_COLORS[FACES.indexOf(face)];ctx.lineWidth=1.5;ctx.stroke();
+                ctx.restore();
+                const cx=pts2.reduce((s,p)=>s+p[0],0)/4,cy=pts2.reduce((s,p)=>s+p[1],0)/4;
+                const tn=transformVec(face.normal);
+                const np=project([tn[0]+0,tn[1]+0,tn[2]+dist]);
+                const cp=project([0,0,dist]);
+                const nx=cx+(np[0]-cp[0])*.5,ny=cy+(np[1]-cp[1])*.5;
+                ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(nx,ny);
+                ctx.strokeStyle=NORMAL_COLORS[FACES.indexOf(face)];ctx.lineWidth=2.5;ctx.stroke();
+                ctx.beginPath();ctx.arc(nx,ny,4,0,Math.PI*2);
+                ctx.fillStyle=NORMAL_COLORS[FACES.indexOf(face)];ctx.fill();
+                ctx.fillStyle='rgba(255,255,255,.8)';ctx.font='10px monospace';ctx.textAlign='center';
+                ctx.fillText(face.name,cx,cy+5);
+            }
+        });
+
+        if(mode==='xray'){
+            EDGES.forEach(([a,b])=>{
+                const p0=project(transform(a)),p1=project(transform(b));
+                ctx.beginPath();ctx.moveTo(p0[0],p0[1]);ctx.lineTo(p1[0],p1[1]);
+                ctx.strokeStyle='rgba(93,158,50,.5)';ctx.lineWidth=.8;ctx.setLineDash([]);ctx.stroke();
+            });
+        }
+    }
+
+    function loop(){draw();requestAnimationFrame(loop)}
+
+    function setMode(m){
+        mode=m;
+        ['texture','wireframe','xray','normals','depth','shading'].forEach(k=>{
+            document.getElementById('btn-'+k).classList.toggle('active',k===m);
+        });
+    }
+
+    function showInfoPage(){
+        document.getElementById('game').style.display='none';
+        document.getElementById('hud-text').style.display='none';
+        document.getElementById('info-page').style.display='block';
+        document.getElementById('loading').style.display='none';
+    }
+    function hideInfoPage(){
+        document.getElementById('game').style.display='block';
+        document.getElementById('hud-text').style.display='block';
+        document.getElementById('info-page').style.display='none';
+    }
+
+    let drag=false,px=0,py=0;
+    canvas.addEventListener('mousedown',e=>{drag=true;px=e.clientX;py=e.clientY});
+    window.addEventListener('mouseup',()=>drag=false);
+    window.addEventListener('mousemove',e=>{
+        if(!drag)return;
+        ry+=(e.clientX-px)*.007;rx+=(e.clientY-py)*.007;
+        px=e.clientX;py=e.clientY;
+    });
+    canvas.addEventListener('wheel',e=>{
+        dist=Math.max(3,Math.min(14,dist+e.deltaY*.01));
+        e.preventDefault();
+    },{passive:false});
+    canvas.addEventListener('touchstart',e=>{drag=true;px=e.touches[0].clientX;py=e.touches[0].clientY},{passive:true});
+    window.addEventListener('touchend',()=>drag=false);
+    window.addEventListener('touchmove',e=>{
+        if(!drag)return;
+        ry+=(e.touches[0].clientX-px)*.007;rx+=(e.touches[0].clientY-py)*.007;
+        px=e.touches[0].clientX;py=e.touches[0].clientY;
+    },{passive:true});
+
+    loadTextures(()=>{
+        document.getElementById('loading').style.display='none';
+        loop();
+    });
+</script>
+
+</body>
+</html>
+

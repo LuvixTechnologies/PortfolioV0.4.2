@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oignon Browser</title>
+
+    <!-- Police VT323 correctement chargée -->
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/navigateur.css">
+
+
+    <style>
+        /* Force VT323 partout dans l'application Oignon */
+        .oignon-app,
+        .oignon-app * {
+            font-family: 'VT323', monospace !important;
+        }
+
+        /* Amélioration du rendu pixel-perfect */
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            background: #0a0a1f;
+            font-family: 'VT323', monospace;
+            image-rendering: pixelated;
+        }
+
+        input, button {
+            font-family: 'VT323', monospace !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="oignon-app">
+
+
+    <div class="oignon-toolbar">
+        <input
+                type="text"
+                id="address"
+                class="address-bar"
+                value="https://duckduckgo.com"
+                placeholder="Tape une URL ou recherche..."
+                onkeydown="if(event.key==='Enter') handleSearch()">
+        <button onclick="handleSearch()">Aller</button>
+    </div>
+
+    <div class="browser-content" id="browser-content">
+        <!-- Page d'accueil -->
+        <div class="home-screen show" id="home-screen">
+            <div class="oignon-logo">🧅</div>
+            <div class="home-title">Bienvenue sur Oignon Browser</div>
+            <div class="favorites-grid" id="favorites-grid"></div>
+        </div>
+
+        <!-- Gmail -->
+        <div id="gmail-page" class="gmail-page">
+            <div class="gmail-header">
+                <div class="gmail-logo">✉️</div>
+                <div class="gmail-address">lucas.pettinato.pro@gmail.com</div>
+                <button onclick="backToHome()" class="retro-btn">← Retour</button>
+            </div>
+            <div class="gmail-list"></div>
+        </div>
+
+        <!-- Page hors ligne -->
+        <div class="offline-page" id="offline-page">
+            <div class="offline-title">🌐 Pas de connexion</div>
+            <p>Oignon n'a pas pu atteindre ce site.</p>
+            <button onclick="startSpaceShooter()" class="retro-btn big">🚀 Lancer le Space Shooter</button>
+            <button onclick="backToHome()" class="retro-btn">← Retour à l'accueil</button>
+        </div>
+
+        <!-- Space Shooter -->
+        <div id="shooter-game" style="display:none; position:absolute; inset:0; background:#0c1326; overflow:hidden;">
+            <div style="position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
+                <canvas id="shooter-canvas" width="900" height="600" style="image-rendering:pixelated; border:4px solid #6a8cff; box-shadow:0 0 30px #6a8cff;"></canvas>
+            </div>
+            <div style="position:absolute; top:15px; left:20px; color:#a0d8ff; font-size:22px; font-weight:bold; text-shadow:0 0 8px #000;" id="score">SCORE: 00000</div>
+            <div style="position:absolute; top:15px; right:20px; color:#ff8899; font-size:22px; text-shadow:0 0 8px #000;" id="lives">❤️❤️❤️</div>
+            <button onclick="backToHome()" style="position:absolute; top:15px; left:50%; transform:translateX(-50%); padding:8px 24px; background:#16213e; color:#a0d8ff; border:3px solid #6a8cff; font-family:'VT323',monospace; font-size:18px; cursor:pointer; z-index:10;">← MENU</button>
+            <div style="position:absolute; bottom:15px; left:0; right:0; text-align:center; color:#6a8cff; font-size:18px; text-shadow:0 0 8px #000;">← → / A D • ESPACE = Tir • ESC = Quitter</div>
+        </div>
+
+        <!-- Game Over -->
+        <div class="game-over" id="game-over" style="display:none; position:absolute; inset:0; background:rgba(12,19,38,0.97); flex-direction:column; align-items:center; justify-content:center; z-index:100;">
+            <h1 style="color:#ff8899; font-size:42px;">GAME OVER</h1>
+            <p id="final-score" style="font-size:24px; margin:20px 0 40px;">Score : 00000</p>
+            <button onclick="restartGame()" class="retro-btn big">▶️ Recommencer</button>
+            <button onclick="backToHome()" class="retro-btn">← Accueil</button>
+        </div>
+    </div>
+</div>
+
+<script src="js/navigateur.js"></script>
+<script src="js/shooter.js"></script>
+
+
+</body>
+</html>

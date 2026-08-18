@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galerie Photos</title>
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d0d0d;
+            --accent: #00ff9d;
+            --card-bg: #141414;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background: var(--bg);
+            color: #eee;
+            font-family: 'VT323', monospace;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: #1a1a1a;
+            padding: 18px 20px;
+            text-align: center;
+            font-size: 2.4rem;
+            letter-spacing: 3px;
+            border-bottom: 3px solid var(--accent);
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .gallery {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px 24px 50px;
+            scroll-behavior: smooth;
+        }
+
+        .section {
+            margin-bottom: 50px;
+        }
+
+        .section h2 {
+            font-size: 1.9rem;
+            color: var(--accent);
+            margin-bottom: 18px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #2a2a2a;
+            letter-spacing: 1.5px;
+        }
+
+        .thumbs {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 22px;
+        }
+
+        .thumb {
+            aspect-ratio: 1 / 1;
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid #222;
+            background: var(--card-bg);
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .thumb:hover {
+            transform: scale(1.04);
+            border-color: var(--accent);
+            box-shadow: 0 0 25px rgba(0, 255, 157, 0.25);
+        }
+
+        .thumb.flash {
+            border-color: var(--accent);
+            box-shadow: 0 0 25px rgba(0, 255, 157, 0.45);
+        }
+
+        .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.3s ease;
+        }
+
+        .thumb:hover img {
+            transform: scale(1.06);
+        }
+
+        /* ===== Carrousel ===== */
+        .carousel {
+            position: fixed;
+            inset: 0;
+            background: rgba(8, 8, 8, 0.97);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .carousel-content {
+            position: relative;
+            width: 95%;
+            max-width: 1300px;
+            height: 92vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .carousel-img {
+            max-width: 100%;
+            max-height: 100%;
+            border-radius: 12px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.85);
+            object-fit: contain;
+        }
+
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.65);
+            color: white;
+            border: 2px solid #333;
+            font-size: 48px;
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            transition: all 0.2s;
+        }
+
+        .nav-btn:hover {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+            transform: translateY(-50%) scale(1.08);
+        }
+
+        .prev { left: 18px; }
+        .next { right: 18px; }
+
+        .close {
+            position: absolute;
+            top: 18px;
+            right: 18px;
+            background: #111;
+            color: white;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            font-size: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid #333;
+            transition: all 0.2s;
+        }
+
+        .close:hover {
+            background: #ff4444;
+            border-color: #ff4444;
+        }
+
+        .counter {
+            position: absolute;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            padding: 8px 28px;
+            border-radius: 30px;
+            font-size: 1.5rem;
+            border: 2px solid var(--accent);
+            letter-spacing: 1px;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                font-size: 1.9rem;
+                padding: 14px;
+            }
+
+            .gallery {
+                padding: 20px 14px 40px;
+            }
+
+            .thumbs {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                gap: 14px;
+            }
+
+            .section h2 {
+                font-size: 1.6rem;
+            }
+
+            .nav-btn {
+                width: 52px;
+                height: 52px;
+                font-size: 36px;
+            }
+
+            .prev { left: 8px; }
+            .next { right: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<header>GALERIE PHOTOS</header>
+
+<div class="gallery" id="gallery"></div>
+
+<!-- Carrousel -->
+<div class="carousel" id="carousel" role="dialog" aria-modal="true" aria-label="Carrousel photo">
+    <div class="carousel-content">
+        <img id="carousel-img" class="carousel-img" src="" alt="" decoding="async">
+        <button class="nav-btn prev" id="prev" aria-label="Photo précédente">‹</button>
+        <button class="nav-btn next" id="next" aria-label="Photo suivante">›</button>
+        <button class="close" id="close" aria-label="Fermer">×</button>
+        <div class="counter" id="counter" aria-live="polite">1 / 1</div>
+    </div>
+</div>
+
+<script>
+    const BASE_PATH = "/assets/photos/";
+    const ALLOWED_EXTENSIONS = [".webp", ".png", ".jpg", ".jpeg"];
+
+    const files = [
+        "logo.png",
+        "helico.webp",
+        "moi.webp",
+        "CTF/cybernight_1er.webp",
+        "CTF/European_cyber_cup.webp",
+        "CTF/Shoot_Bureau_DVC-04.webp",
+        "projects/ecran_transparent.webp",
+        "projects/IA_Text_detection.webp",
+        "projects/ordi_reparation.webp",
+        "logs/pompier.webp",
+        "garage/avant.webp",
+        "garage/peinture.webp",
+        "garage/apres.webp",
+        "hobbies/circuit_course.webp",
+        "hobbies/repas1.webp",
+        "hobbies/repas2.webp",
+        "hobbies/repas3.webp",
+        "hobbies/repas4.webp",
+    ];
+
+    const categoryTitles = {
+        Divers: "Divers",
+        CTF: "CTF / Cyber",
+        garage: "Garage",
+        hobbies: "Hobbies",
+        logs: "Logs",
+        projects: "Projets"
+    };
+
+    const categoryOrder = ["Divers", "CTF", "projects", "logs", "garage", "hobbies"];
+
+    let currentIndex = 0;
+
+    // ========== Sécurité : validation des chemins ==========
+    function isSafePath(file) {
+        if (typeof file !== "string" || file.length === 0) return false;
+        if (file.includes("..") || file.startsWith("/") || file.startsWith("\\")) return false;
+        if (file.includes("://") || file.includes("\\\\")) return false;
+
+        const ext = file.slice(file.lastIndexOf(".")).toLowerCase();
+        return ALLOWED_EXTENSIONS.includes(ext);
+    }
+
+    function getSafeUrl(file) {
+        if (!isSafePath(file)) {
+            console.warn("Chemin rejeté (sécurité) :", file);
+            return null;
+        }
+        return BASE_PATH + file;
+    }
+
+    // ========== Construction de la galerie ==========
+    function loadGallery() {
+        const gallery = document.getElementById("gallery");
+        gallery.innerHTML = "";
+
+        const groups = {};
+        files.forEach((file, index) => {
+            if (!isSafePath(file)) return; // on ignore les fichiers non sûrs
+
+            const cat = file.includes("/") ? file.split("/")[0] : "Divers";
+            if (!groups[cat]) groups[cat] = [];
+            groups[cat].push({ file, index });
+        });
+
+        categoryOrder.forEach(cat => {
+            if (!groups[cat] || groups[cat].length === 0) return;
+
+            const section = document.createElement("div");
+            section.className = "section";
+
+            const title = document.createElement("h2");
+            title.textContent = categoryTitles[cat] || cat;
+            section.appendChild(title);
+
+            const thumbs = document.createElement("div");
+            thumbs.className = "thumbs";
+
+            groups[cat].forEach(({ file, index }) => {
+                const url = getSafeUrl(file);
+                if (!url) return;
+
+                const div = document.createElement("div");
+                div.className = "thumb";
+                div.dataset.index = String(index);
+                div.setAttribute("role", "button");
+                div.setAttribute("tabindex", "0");
+                div.setAttribute("aria-label", `Ouvrir ${file}`);
+
+                const img = document.createElement("img");
+                img.src = url;
+                img.alt = file;
+                img.loading = "lazy";
+                img.decoding = "async";
+                img.onerror = () => {
+                    img.style.opacity = "0.3";
+                    img.alt = "Image non trouvée";
+                };
+
+                div.appendChild(img);
+
+                const open = () => openCarousel(index);
+                div.addEventListener("click", open);
+                div.addEventListener("keydown", e => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        open();
+                    }
+                });
+
+                thumbs.appendChild(div);
+            });
+
+            section.appendChild(thumbs);
+            gallery.appendChild(section);
+        });
+    }
+
+    // ========== Carrousel ==========
+    function openCarousel(index) {
+        if (index < 0 || index >= files.length || !isSafePath(files[index])) return;
+
+        currentIndex = index;
+        updateCarousel();
+        const carousel = document.getElementById("carousel");
+        carousel.style.display = "flex";
+        document.body.style.overflow = "hidden";
+
+        // Focus sur le bouton fermer pour l'accessibilité
+        document.getElementById("close").focus();
+
+        highlightThumb(index);
+    }
+
+    function openPhotoByPath(path) {
+        if (typeof path !== "string") return;
+        const idx = files.indexOf(path);
+        if (idx === -1) {
+            console.warn("Photo introuvable dans la galerie :", path);
+            return;
+        }
+        openCarousel(idx);
+    }
+
+    function highlightThumb(index) {
+        document.querySelectorAll(".thumb.flash").forEach(el => el.classList.remove("flash"));
+        const thumb = document.querySelector(`.thumb[data-index="${index}"]`);
+        if (!thumb) return;
+        thumb.classList.add("flash");
+        thumb.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+
+    function updateCarousel() {
+        if (currentIndex < 0 || currentIndex >= files.length) return;
+
+        const file = files[currentIndex];
+        const url = getSafeUrl(file);
+        if (!url) return;
+
+        const img = document.getElementById("carousel-img");
+        img.src = url;
+        img.alt = file;
+
+        document.getElementById("counter").textContent =
+            `${currentIndex + 1} / ${files.length}`;
+    }
+
+    function prevPhoto() {
+        currentIndex = (currentIndex - 1 + files.length) % files.length;
+        // Skip les fichiers non sûrs
+        let attempts = 0;
+        while (!isSafePath(files[currentIndex]) && attempts < files.length) {
+            currentIndex = (currentIndex - 1 + files.length) % files.length;
+            attempts++;
+        }
+        updateCarousel();
+        highlightThumb(currentIndex);
+    }
+
+    function nextPhoto() {
+        currentIndex = (currentIndex + 1) % files.length;
+        let attempts = 0;
+        while (!isSafePath(files[currentIndex]) && attempts < files.length) {
+            currentIndex = (currentIndex + 1) % files.length;
+            attempts++;
+        }
+        updateCarousel();
+        highlightThumb(currentIndex);
+    }
+
+    function closeCarousel() {
+        document.getElementById("carousel").style.display = "none";
+        document.body.style.overflow = "";
+        // On retire le src pour libérer un peu de mémoire
+        document.getElementById("carousel-img").src = "";
+    }
+
+    // ========== Événements ==========
+    document.getElementById("prev").addEventListener("click", prevPhoto);
+    document.getElementById("next").addEventListener("click", nextPhoto);
+    document.getElementById("close").addEventListener("click", closeCarousel);
+
+    // Clic sur le fond → fermer
+    document.getElementById("carousel").addEventListener("click", e => {
+        if (e.target.id === "carousel") closeCarousel();
+    });
+
+    // Clavier
+    document.addEventListener("keydown", e => {
+        const carousel = document.getElementById("carousel");
+        if (carousel.style.display !== "flex") return;
+
+        if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            prevPhoto();
+        } else if (e.key === "ArrowRight") {
+            e.preventDefault();
+            nextPhoto();
+        } else if (e.key === "Escape") {
+            e.preventDefault();
+            closeCarousel();
+        }
+    });
+
+    // Swipe mobile
+    let touchStartX = 0;
+    document.getElementById("carousel").addEventListener("touchstart", e => {
+        touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    document.getElementById("carousel").addEventListener("touchend", e => {
+        const touchEndX = e.changedTouches[0].screenX;
+        const diff = touchEndX - touchStartX;
+        if (diff < -50) nextPhoto();
+        if (diff > 50) prevPhoto();
+    }, { passive: true });
+
+    window.addEventListener("message", e => {
+        if (e.origin !== window.location.origin) return;
+        if (e.data?.action === "openPhoto") openPhotoByPath(e.data.file);
+    });
+
+    window.addEventListener("load", () => {
+        loadGallery();
+
+        const hash = window.location.hash;
+        if (!hash) return;
+
+        if (hash.startsWith("#photo=")) {
+            openPhotoByPath(decodeURIComponent(hash.slice("#photo=".length)));
+        } else {
+            const idx = parseInt(hash.substring(1), 10);
+            if (!isNaN(idx) && idx >= 0 && idx < files.length) {
+                openCarousel(idx);
+            }
+        }
+    });
+</script>
+</body>
+</html>
