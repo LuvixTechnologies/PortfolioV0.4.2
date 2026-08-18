@@ -73,8 +73,7 @@ file_handler = RotatingFileHandler(
 file_handler.setFormatter(log_formatter)
 logger.addHandler(file_handler)
 
-# La console n'est utile qu'en développement (évite de doubler les logs
-# sous un service systemd/gunicorn qui capture déjà stdout).
+# La console n'est utile qu'en développement
 if DEBUG:
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(log_formatter)
