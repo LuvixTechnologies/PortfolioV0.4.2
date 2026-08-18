@@ -1,5 +1,7 @@
 # 🖥️ Luvix OS - 16 bits Edition
 
+![alt text](./capt_name.png)
+
 > **Une immersion numérique entre nostalgie et modernité.**  
 > Luvix OS n’est pas un simple portfolio. C’est un véritable écosystème interactif pensé comme un système d’exploitation rétro. Naviguez à travers mes recherches, explorez mes projets les plus délirants présentés sous forme d’applications, et plongez dans mon univers créatif.
 **[🌐 Accéder à l'expérience en ligne](https://lucas-pettinato.fr)**
@@ -16,6 +18,8 @@ L'objectif de ce projet est de sortir du cadre classique du "site CV" pour propo
 * 🚀 **Projets "App-like"** : Chaque travail est présenté comme une application autonome.
 * 📂 **Exploration de l'univers** : Navigation non-linéaire pour découvrir CV, travaux et recherches.
 * ⚡ **Performance & Légèreté** : Utilisation de technologies natives pour une fluidité maximale.
+
+![alt text](./capt_desktop.png)
 
 ---
 
