@@ -25,6 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/'/g, '&#39;');
     }
 
+    // Échappement dédié aux valeurs insérées dans un attribut HTML
+    // (src="...", etc). Identique à escapeHtml mais nommé séparément pour
+    // rendre l'intention explicite à chaque site d'appel : "ceci vient
+    // (même indirectement) d'une donnée externe et va dans un attribut".
+    const escapeAttr = escapeHtml;
 
     function isSafeInternalUrl(str) {
         if (typeof str !== 'string') return false;
@@ -40,7 +45,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const slashNormalized = cleaned.replace(/\\/g, '/');
         if (slashNormalized.startsWith('//')) return false;
 
-        return cleaned.startsWith('/');
+        if (!cleaned.startsWith('/')) return false;
+
+        // SÉCURITÉ : rejette tout caractère susceptible de casser hors de
+        // l'attribut HTML dans lequel cette URL est ensuite interpolée
+        // (src="${content}"). Sans ce filtre, un chemin contenant un `"`
+        // ou un `<` permettait une injection HTML/JS — notamment via le
+        // hash routing (#f-xxxxx, décodé depuis du base64 arbitraire côté
+        // client). escapeAttr() ci-dessous reste une seconde barrière en
+        // défense en profondeur
+        if (/["'<>`]/.test(cleaned)) return false;
+
+        return true;
     }
 
     // ====================== TAGS URL (base64url) ======================
@@ -89,9 +105,9 @@ document.addEventListener('DOMContentLoaded', () => {
         'À propos'             : '/assets/icons/info.png',
         'Redémarrer'           : '/assets/icons/restart.png',
         'Éteindre'             : '/assets/icons/start.png',
-        'Luvix OS'             : '/assets/icons/parrot.png',
         'Luvix Engine'         : '/assets/icons/engine.png',
-        'default'              : '/assets/icons/default.png'
+        'default'              : '/assets/icons/default.png',
+        'Sentinel Vision'      : '/assets/icons/sentinel-vision.png',
     };
 
     function preloadIcons() {
@@ -128,6 +144,69 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
+    // ====================== REGISTRE UNIQUE DES APPS ======================
+    // SÉCURITÉ / MAINTENABILITÉ : auparavant chaque appli était déclarée
+    // séparément dans le menu "Applications", les icônes du bureau et le
+    // hash routing (3 copies indépendantes).
+    // Ce registre est désormais l'unique source de vérité : un seul endroit à modifier,
+    // un seul comportement possible quel que soit le point d'entrée.
+    //
+    // width/height : chaque app DOIT préciser sa propre taille ici. Sans
+    // ça, createWindow() retombe sur son défaut générique (860×560) pour
+    // toutes les fenêtres non-dialog
+
+    const APPS = {
+        Terminal: {
+            title: 'Terminal', url: '/terminal.html',
+            x: 220, y: 120, tag: 'Terminal', sandbox: explorerSandbox,
+            width: '700px', height: '440px',
+        },
+        Galerie: {
+            title: 'Gallerie', url: '/galerie.html',
+            x: 220, y: 120, tag: 'Galerie', sandbox: explorerSandbox,
+            width: '900px', height: '600px',
+        },
+        Navigateur: {
+            title: 'Navigateur Oignon', url: '/navigateur.html',
+            x: 180, y: 100, tag: 'Navigateur', sandbox: navigateurSandbox,
+            width: '1000px', height: '650px',
+        },
+        Luvix3DEngine: {
+            title: 'Luvix 3D Engine', url: '/3DEngine.html',
+            x: 180, y: 100, tag: 'Luvix3DEngine', sandbox: explorerSandbox,
+            width: '900px', height: '640px',
+        },
+        Explorateur: {
+            title: 'Explorateur', url: '/files.html',
+            x: 180, y: 100, tag: 'Explorateur', sandbox: explorerSandbox,
+            width: '860px', height: '640px',
+        },
+        SentinelVision: {
+            title: 'Sentinel Vision', url: '/SentinelVision.html',
+            x: 180, y: 100, tag: 'SentinelVision',
+            width: '1000px', height: '560px',
+        },
+        Apropos: {
+            title: 'À propos - Luvix OS', url: '/Apropos.html',
+            x: 180, y: 100, tag: 'Apropos',
+            isDialog: true, centered: true, width: '560px', height: '420px',
+        },
+    };
+
+    function launchApp(key) {
+        const app = APPS[key];
+        if (!app) { console.warn('launchApp: app inconnue', key); return; }
+        return createWindow(app.title, app.url, app.x, app.y, {
+            tag: app.tag,
+            sandbox: app.sandbox,
+            isDialog: app.isDialog,
+            centered: app.centered,
+            width: app.width,
+            height: app.height,
+        });
+    }
+    window.launchApp = launchApp;
+
     // ====================== CREATE WINDOW ======================
     function createWindow(title, content, x, y, opts = {}) {
 
@@ -143,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
             minimizable = !isDialog,
             buttons     = [],
             tag         = '',
-            sandbox: sandboxOverride = null
+            sandbox: sandboxOverride = null,
         } = opts;
 
         // Fenêtre déjà ouverte → focus (et donc mise à jour du tag)
@@ -194,8 +273,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const safeTitle = escapeHtml(title);
 
+        // SÉCURITÉ (défense en profondeur) : même si isSafeInternalUrl()
+        // rejette désormais les guillemets/chevrons en amont, on échappe
+        // quand même `content` ici avant de l'insérer dans l'attribut
+        // src="...". Deux barrières valent mieux qu'une pour une valeur
+        // qui, selon le point d'appel, peut provenir d'un hash d'URL
+        // décodé côté client (voir openFile / handleHash).
         const contentHTML = isUrl
-            ? `<iframe src="${content}" allowfullscreen${sandbox ? ` sandbox="${sandbox}"` : ''} referrerpolicy="no-referrer" loading="lazy"></iframe>`
+            ? `<iframe src="${escapeAttr(content)}" allowfullscreen${sandbox ? ` sandbox="${sandbox}"` : ''} referrerpolicy="no-referrer" loading="lazy"></iframe>`
             : rejectedUrl
                 ? `<div class="dialog-content">Contenu externe bloqué pour raisons de sécurité.</div>`
                 : `<div class="dialog-content">${content}</div>`;
@@ -342,9 +427,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (ext === 'pdf') {
             content = path; // iframe directe, pas de sandbox (cf. commentaire dans createWindow)
             opts = { tag, width: '900px', height: '650px' };
-        } else if (['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'].includes(ext)) {
+        } else if (['png', 'jpg', 'webp'].includes(ext)) {
+            // SÉCURITÉ : `path` a déjà passé isAllowedFilePath() (donc
+            // isSafeInternalUrl(), qui rejette désormais " ' < > `), mais
+            // on l'échappe quand même ici en défense en profondeur avant
+            // de l'insérer dans l'attribut src="".
             content = `<div style="display:flex;align-items:center;justify-content:center;height:100%;padding:20px;">
-                <img src="${path}" alt="${escapeHtml(rawName)}"
+                <img src="${escapeAttr(path)}" alt="${escapeHtml(rawName)}"
                      style="max-width:100%;max-height:100%;border:1px solid var(--c-border);border-radius:6px;"
                      onerror="this.replaceWith(Object.assign(document.createElement('div'),{textContent:'Aperçu indisponible',style:'color:rgba(224,255,255,.5);font-size:18px;'}))">
             </div>`;
@@ -605,11 +694,12 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#apps-button').addEventListener('click', e => {
         e.stopPropagation();
         showMenu(e.currentTarget, 'Applications', [
-            { label: 'Terminal',     action: () => createWindow('Terminal',          '/terminal.html',   220, 120, { tag: 'Terminal', sandbox: explorerSandbox }) },
-            { label: 'Curriculum',   action: () => openFile('/assets/files/CV.pdf', { tag: 'CV', title: 'Curriculum' }) },
-            { label: 'Navigateur',   action: () => createWindow('Navigateur Oignon', '/navigateur.html', 180, 100, { tag: 'Navigateur', sandbox: navigateurSandbox }) },
-            { label: 'Luvix Engine', action: () => createWindow('Luvix 3D Engine',   '/3DEngine.html',   180, 100, { tag: 'Luvix3DEngine', sandbox: explorerSandbox }) },
-            { label: 'Explorateur',  action: () => createWindow('Explorateur', '/files.html', 180, 100, { tag: 'Explorateur', sandbox: explorerSandbox }) },
+            { label: 'Terminal',       action: () => launchApp('Terminal') },
+            { label: 'Curriculum',     action: () => openFile('/assets/files/CV.pdf', { tag: 'CV', title: 'Curriculum' }) },
+            { label: 'Navigateur',     action: () => launchApp('Navigateur') },
+            { label: 'Luvix Engine',   action: () => launchApp('Luvix3DEngine') },
+            { label: 'Explorateur',    action: () => launchApp('Explorateur') },
+            { label: 'Sentinel Vision',action: () => launchApp('SentinelVision') },
         ]);
     });
 
@@ -617,8 +707,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.stopPropagation();
         showMenu(e.currentTarget, 'Système', [
             { label: 'Paramètres', action: () => createWindow('Paramètres', 'Bientôt disponible...', null, null, { isDialog: true, tag: 'Parametres' }) },
-            { label: 'À propos',   action: () => createWindow('À propos - Luvix OS', '/Apropos.html', 220, 120,
-                    { isDialog: true, centered: true, width: '560px', height: '420px', tag: 'Apropos' }) },
+            { label: 'À propos',   action: () => launchApp('Apropos') },
             { label: 'Redémarrer', action: restartOS },
             { label: 'Éteindre',   action: shutdown  },
         ]);
@@ -657,14 +746,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ====================== HASH ROUTING ======================
     const hashActions = {
-        'Terminal'     : () => createWindow('Terminal',          '/terminal.html',   220, 120, { tag: 'Terminal', sandbox: explorerSandbox }),
-        'Galerie'      : () => createWindow('Gallerie',          '/galerie.html',    220, 120, { tag: 'Galerie', sandbox: explorerSandbox }),
-        'Navigateur'   : () => createWindow('Navigateur Oignon', '/navigateur.html', 180, 100, { tag: 'Navigateur', sandbox: navigateurSandbox }),
-        'CV'           : () => openFile('/assets/files/CV.pdf', { tag: 'CV', title: 'Curriculum' }),
-        'Luvix3DEngine': () => createWindow('Luvix 3D Engine',   '/3DEngine.html',   180, 100, { tag: 'Luvix3DEngine', sandbox: explorerSandbox }),
-        'Explorateur'  : () => createWindow('Explorateur',       '/files.html',      180, 100, { tag: 'Explorateur', sandbox: explorerSandbox }),
-        'Apropos'      : () => createWindow('À propos - Luvix OS', '/Apropos.html', 220, 120,
-            { isDialog: true, centered: true, width: '560px', height: '420px', tag: 'Apropos' }),
+        'Terminal'        : () => launchApp('Terminal'),
+        'Galerie'         : () => launchApp('Galerie'),
+        'Navigateur'      : () => launchApp('Navigateur'),
+        'CV'              : () => openFile('/assets/files/CV.pdf', { tag: 'CV', title: 'Curriculum' }),
+        'Luvix3DEngine'   : () => launchApp('Luvix3DEngine'),
+        'Explorateur'     : () => launchApp('Explorateur'),
+        'Apropos'         : () => launchApp('Apropos'),
+        'SentinelVision'  : () => launchApp('SentinelVision'),
     };
 
     function handleHash() {
@@ -724,9 +813,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ====================== ICÔNES DU BUREAU ======================
     $('#CV')?.addEventListener('dblclick',            () => openFile('/assets/files/CV.pdf', { tag: 'CV', title: 'Curriculum' }));
-    $('#Terminal')?.addEventListener('dblclick',      () => createWindow('Terminal',          '/terminal.html',    220, 120, { tag: 'Terminal', sandbox: explorerSandbox }));
-    $('#Gallery')?.addEventListener('dblclick',       () => createWindow('Gallerie',          '/galerie.html',     220, 120, { tag: 'Galerie', sandbox: explorerSandbox }));
-    $('#Navigateur')?.addEventListener('dblclick',    () => createWindow('Navigateur Oignon', '/navigateur.html',  180, 100, { tag: 'Navigateur', sandbox: navigateurSandbox }));
-    $('#Luvix3DEngine')?.addEventListener('dblclick', () => createWindow('Luvix 3D Engine',   '/3DEngine.html',    180, 100, { tag: 'Luvix3DEngine', sandbox: explorerSandbox }));
-    $('#Explorateur')?.addEventListener('dblclick',   () => createWindow('Explorateur',       '/files.html',       180, 100, { tag: 'Explorateur', sandbox: explorerSandbox }));
+    $('#Terminal')?.addEventListener('dblclick',      () => launchApp('Terminal'));
+    $('#Gallery')?.addEventListener('dblclick',       () => launchApp('Galerie'));
+    $('#Navigateur')?.addEventListener('dblclick',    () => launchApp('Navigateur'));
+    $('#Luvix3DEngine')?.addEventListener('dblclick', () => launchApp('Luvix3DEngine'));
+    $('#Explorateur')?.addEventListener('dblclick',   () => launchApp('Explorateur'));
+    $('#SentinelVision')?.addEventListener('dblclick',() => launchApp('SentinelVision'));
 });
