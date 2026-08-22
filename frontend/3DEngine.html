@@ -64,7 +64,7 @@
         <button class="btn" id="btn-depth" onclick="setMode('depth')">Profondeur</button>
         <button class="btn" id="btn-shading" onclick="setMode('shading')">Éclairage</button>
         <div class="separator"></div>
-        <button class="btn info-btn" onclick="showInfoPage()">⟩ Explication maths</button>
+        <button class="btn info-btn" onclick="showInfoPage()">⟩ Explications mathématiques</button>
     </div>
     <div id="loading">Chargement des textures…</div>
     <canvas id="game" width="400" height="400"></canvas>
@@ -79,7 +79,7 @@
         <h2>1. Transformations géométriques</h2>
 
         <h3>Rotations autour de Y puis X</h3>
-        <p>Les sommets sont d’abord tournés autour de l’axe vertical (Y), puis autour de l’axe horizontal (X). L’ordre est important car les rotations ne commutent pas.</p>
+        <p>Les sommets sont d’abord tournés autour de l’axe vertical (Y), puis autour de l’axe horizontal (X). L’ordre est important, car les rotations ne commutent pas.</p>
 
         <p>Matrice de rotation autour de l’axe Y (yaw) :</p>
         $$
@@ -146,7 +146,7 @@
         \text{visible} \iff N_z < 0
         $$
 
-        <p>Après transformation, la caméra regarde vers $+Z$. Une face orientée vers la caméra a sa normale pointant globalement vers $-Z$, d’où $N_z < 0$. Les faces arrière sont purement ignorées (économie ≈ 50 % des pixels).</p>
+        <p>Après transformation, la caméra regarde vers $+Z$. Une face orientée vers la caméra à sa normale pointant globalement vers $-Z$, d’où $N_z < 0$. Les faces arrière sont purement ignorées (économie ≈ 50 % des pixels).</p>
 
         <div class="note">
             On utilise les sommets <em>après</em> rotation + translation. Cela permet de gérer correctement les rotations arbitraires sans transformer les normales avec la matrice inverse-transposée.
@@ -160,7 +160,7 @@
         <h3>Principe</h3>
         <ol>
             <li>On découpe le quad en une grille $N \times N$ (ici $N = 16$).</li>
-            <li>Pour chaque petit quad on interpole bilinéairement les positions écran <em>et</em> les UV.</li>
+            <li>Pour chaque petit quad, on interpole bilinéairement les positions écran <em>et</em> les UV.</li>
             <li>On résout le système affine $2\times3$ qui envoie le rectangle UV source vers le petit quad destination.</li>
             <li>On clippe au petit quad et on dessine avec <code>ctx.transform(a,b,c,d,e,f)</code>.</li>
         </ol>
